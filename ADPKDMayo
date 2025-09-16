@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ADPKD – Mayo Hacim Hesaplayıcı</title>
+  <style>
+    :root{
+      --bg:#0b1220; /* koyu lacivert */
+      --card:#111a2b;
+      --muted:#a3b1c6;
+      --accent:#3b82f6;
+      --ok:#16a34a;
+      --bad:#ef4444;
+      --border:#243145;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#e7eefc; background:var(--bg)}
+    h1{font-size:20px;margin:0 0 12px}
+    p{color:var(--muted);margin:6px 0 14px}
+    .wrap{max-width:980px;margin:0 auto;display:grid;gap:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+    .grid{display:grid;gap:8px}
+    .grid.cols-2{grid-template-columns:1fr 1fr}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    label{font-weight:600;color:#d7e3f8}
+    input[type=number]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0f172a;color:#e7eefc}
+    input[type=number]:focus{outline:2px solid var(--accent)}
+    .tbl{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .tbl th,.tbl td{border-bottom:1px solid var(--border);padding:10px 12px;text-align:center}
+    .tbl thead th{background:#0e1627;color:#cbd5e1}
+    .tbl tfoot td{font-weight:700;background:#0e1627}
+    .note{font-size:12px;color:#9fb0c9}
+    .btns{display:flex;gap:10px;flex-wrap:wrap}
+    button{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#141f33;color:#e7eefc;cursor:pointer}
+    button.primary{background:var(--accent);border-color:var(--accent);color:white}
+    .out{display:grid;gap:8px}
+    .kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .kpi .box{background:#0c1526;border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
+    .box h3{margin:6px 0 2px;font-size:14px;color:#cbd5e1}
+    .box .val{font-size:22px;font-weight:800}
+    .warn{color:#fbbf24}
+    .success{color:var(--ok)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
+    textarea{width:100%;min-height:120px;background:#0f172a;border:1px solid var(--border);border-radius:12px;color:#e7eefc;padding:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>ADPKD – Mayo Hacim Hesaplayıcı</h1>
+      <p>Kistler <em>dahil</em> böbrek dış sınırlarından <strong>SAG (uzunluk)</strong>, <strong>AP</strong> ve <strong>TRA</strong> (genişlik) ölçülerini mm cinsinden girin. Hacim formülü: <span class="mono">Vol = L × W × T × 0.523 / 1000</span> (mL).</p>
+    </header>
+
+    <section class="card">
+      <div class="grid cols-2" style="gap:16px">
+        <div>
+          <h2>Sağ Böbrek</h2>
+          <div class="grid cols-3">
+            <div><label for="rL">SAG (mm)</label><input id="rL" type="number" min="0" step="1" value="107"></div>
+            <div><label for="rAP">AP (mm)</label><input id="rAP" type="number" min="0" step="1" value="53"></div>
+            <div><label for="rT">TRA (mm)</label><input id="rT" type="number" min="0" step="1" value="48"></div>
+          </div>
+        </div>
+        <div>
+          <h2>Sol Böbrek</h2>
+          <div class="grid cols-3">
+            <div><label for="lL">SAG (mm)</label><input id="lL" type="number" min="0" step="1" value="107"></div>
+            <div><label for="lAP">AP (mm)</label><input id="lAP" type="number" min="0" step="1" value="68"></div>
+            <div><label for="lT">TRA (mm)</label><input id="lT" type="number" min="0" step="1" value="58"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid cols-3" style="margin-top:16px">
+        <div>
+          <label for="age">Yaş (yıl) <span class="note">(Mayo sınıfı için isteğe bağlı)</span></label>
+          <input id="age" type="number" min="0" step="1" placeholder="Örn. 45">
+        </div>
+        <div>
+          <label for="height">Boy (cm) <span class="note">(htTKV için isteğe bağlı)</span></label>
+          <input id="height" type="number" min="0" step="0.1" placeholder="Örn. 172">
+        </div>
+        <div style="display:flex;align-items:end"><button class="primary" id="calcBtn">Hesapla</button></div>
+      </div>
+    </section>
+
+    <section class="card out">
+      <table class="tbl" id="table">
+        <thead>
+          <tr><th>Böbrek</th><th>SAG (mm)</th><th>AP (mm)</th><th>TRA (mm)</th><th>Vol (mL)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Sağ</td><td id="rL_out">–</td><td id="rAP_out">–</td><td id="rT_out">–</td><td id="rV">–</td></tr>
+          <tr><td>Sol</td><td id="lL_out">–</td><td id="lAP_out">–</td><td id="lT_out">–</td><td id="lV">–</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td colspan="4">Toplam Böbrek Hacmi (TKV)</td><td id="tkv">–</td></tr>
+        </tfoot>
+      </table>
+
+      <div class="kpi">
+        <div class="box"><h3>htTKV (mL/m)</h3><div class="val" id="httkv">–</div><div class="note">(Boy girilirse hesaplanır)</div></div>
+        <div class="box"><h3>Mayo Sınıfı (Otomatik)</h3><div class="val" id="mayo">–</div><div class="note">(Tipik sınıf 1 için, Yaş + htTKV ile)</div></div>
+      </div>
+
+      <div class="btns">
+        <button id="copyReport">Rapor Metnini Kopyala</button>
+        <button id="reset">Temizle</button>
+      </div>
+
+      <textarea id="report" readonly></textarea>
+      <p class="note">Not: Mayo ADPKD sınıflaması yalnızca <strong>Tipik (Class 1)</strong> olgular içindir. Atypik (Class 2) olgularda belirgin eksöfitik kistler varsa htTKV'yi bunlar hariç tutarak yeniden hesaplamak gerekebilir.</p>
+    </section>
+  </div>
+
+  <script>
+    function volMl(L, W, T){
+      if([L,W,T].some(x => !isFinite(x) || x<=0)) return NaN;
+      return (L*W*T*0.523)/1000; // mm^3 -> mL
+    }
+
+    function fmt(x){
+      return isFinite(x) ? (Math.round(x*10)/10).toFixed(1) : '–';
+    }
+
+    function mayoClassFromHtTKV(age, httkv){
+  // MIC formülü: HtTKV(t) = K * (1 + α/100)^(t - A), K=150 mL/m, A=0.
+  // Buradan α = 100 * ((HtTKV/K)^(1/t) - 1)
+  if(!isFinite(age) || age<=0 || !isFinite(httkv) || httkv<=0) return {cls:'–', alpha: NaN};
+  const K = 150.0; // mL/m
+  const alpha = 100 * (Math.pow(httkv / K, 1/age) - 1); // %/yıl
+  // MIC bantları (sınırlar dahil):
+  // 1A: <1.5, 1B: 1.5–3, 1C: 3–4.5, 1D: 4.5–6, 1E: >6 %/yıl
+  let cls = '1A';
+  if(alpha >= 1.5) cls = '1B';
+  if(alpha >= 3.0) cls = '1C';
+  if(alpha >= 4.5) cls = '1D';
+  if(alpha > 6.0) cls = '1E';
+  return {cls, alpha};
+}
+
+    function buildReport(values){
+      const {rL,rAP,rT,lL,lAP,lT, rV, lV, TKV, age, height, httkv, mayo, alpha} = values;
+      const lines = [];
+      lines.push('Polikistik Böbrek – Hacim Hesabı (Mayo yaklaşımı)');
+      lines.push('Ölçümler kistler dahil böbrek dış sınırlarından yapılmıştır.');
+      lines.push(`Sağ: SAG ${rL} mm, AP ${rAP} mm, TRA ${rT} mm → Hacim ${fmt(rV)} mL.`);
+      lines.push(`Sol: SAG ${lL} mm, AP ${lAP} mm, TRA ${lT} mm → Hacim ${fmt(lV)} mL.`);
+      lines.push(`Toplam Böbrek Hacmi (TKV): ${fmt(TKV)} mL.`);
+      if(isFinite(height)){
+        lines.push(`Boy: ${height} cm → htTKV: ${fmt(httkv)} mL/m.`);
+      }
+      if(isFinite(age) && isFinite(httkv)){
+  lines.push(`Mayo sınıfı: ${mayo}.`);
+}
+      return lines.join('\n');
+    }
+
+    function calc(){
+      const rL = Number(document.getElementById('rL').value);
+      const rAP = Number(document.getElementById('rAP').value);
+      const rT = Number(document.getElementById('rT').value);
+      const lL = Number(document.getElementById('lL').value);
+      const lAP = Number(document.getElementById('lAP').value);
+      const lT = Number(document.getElementById('lT').value);
+      const age = Number(document.getElementById('age').value);
+      const heightCm = Number(document.getElementById('height').value);
+
+      const rV = volMl(rL,rAP,rT);
+      const lV = volMl(lL,lAP,lT);
+      const TKV = (rV||0)+(lV||0);
+
+      document.getElementById('rL_out').textContent = isFinite(rL)? rL : '–';
+      document.getElementById('rAP_out').textContent = isFinite(rAP)? rAP : '–';
+      document.getElementById('rT_out').textContent = isFinite(rT)? rT : '–';
+      document.getElementById('lL_out').textContent = isFinite(lL)? lL : '–';
+      document.getElementById('lAP_out').textContent = isFinite(lAP)? lAP : '–';
+      document.getElementById('lT_out').textContent = isFinite(lT)? lT : '–';
+
+      document.getElementById('rV').textContent = fmt(rV);
+      document.getElementById('lV').textContent = fmt(lV);
+      document.getElementById('tkv').textContent = fmt(TKV);
+
+      let httkv = NaN;
+      if(isFinite(heightCm) && heightCm>0){
+        httkv = TKV / (heightCm/100.0); // mL/m
+      }
+      document.getElementById('httkv').textContent = fmt(httkv);
+
+      let mayoLabel = '–';
+let alpha = NaN;
+if(isFinite(age) && isFinite(httkv)){
+  const r = mayoClassFromHtTKV(age, httkv);
+  mayoLabel = `${r.cls} — eHTKV-α: ${fmt(r.alpha)} %/yıl`;
+  alpha = r.alpha;
+}
+document.getElementById('mayo').textContent = mayoLabel;
+
+      const report = buildReport({rL,rAP,rT,lL,lAP,lT,rV,lV,TKV,age,height:heightCm,httkv,mayo,alpha});
+      document.getElementById('report').value = report;
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', calc);
+    ['rL','rAP','rT','lL','lAP','lT','age','height'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', ()=>{ /* canlı hesap */ calc(); });
+    });
+
+    document.getElementById('copyReport').addEventListener('click', async ()=>{
+      const txt = document.getElementById('report').value;
+      try{ await navigator.clipboard.writeText(txt); alert('Rapor panoya kopyalandı.'); }
+      catch(e){
+        // Eski tarayıcılar için fallback
+        const ta = document.getElementById('report');
+        ta.select(); document.execCommand('copy');
+        alert('Rapor panoya kopyalandı.');
+      }
+    });
+
+    document.getElementById('reset').addEventListener('click', ()=>{
+      ['rL','rAP','rT','lL','lAP','lT','age','height'].forEach(id=>document.getElementById(id).value='');
+      calc();
+    });
+
+    // başlangıç hesaplaması (örnek değerlerle)
+    calc();
+  </script>
+</body>
+</html>
