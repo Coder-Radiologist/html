@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DLP → mSv Hesaplayıcı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --card:255 255 255; --ink:17 24 39 }
+    html{ color-scheme: light; }
+    body{ background:rgb(243 244 246); color:rgb(var(--ink)); }
+    .card{ background:rgb(var(--card)); box-shadow:0 10px 25px rgba(0,0,0,.06); border-radius:1.25rem }
+    input[type=number]{ appearance:textfield }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
+    .mono{ font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="min-h-screen py-8">
+  <div class="max-w-5xl mx-auto px-4">
+    <header class="mb-6">
+      <h1 class="text-3xl font-extrabold tracking-tight">DLP → mSv Hesaplayıcı</h1>
+      <p class="text-sm text-gray-600 mt-1">Erişkin için tipik <span class="font-semibold">k</span> katsayılarını kullanır. Birden fazla seri/bölgeyi ekleyip toplam etkin dozu (mSv) hesaplayın. İsterseniz <span class="font-semibold">k</span>'yı satır bazında manuel düzenleyebilirsiniz.</p>
+    </header>
+
+    <section class="card p-5">
+      <div class="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+        <div class="flex items-center gap-3">
+          <label class="text-sm font-semibold">Birimler</label>
+          <span class="inline-flex items-center gap-2 text-xs text-gray-600">DLP: mGy·cm | Çıktı: mSv</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="addRow" class="px-3 py-2 rounded-xl bg-black/90 text-white text-sm font-semibold hover:bg-black">+ Satır Ekle</button>
+          <button id="reset" class="px-3 py-2 rounded-xl border text-sm font-semibold">Temizle</button>
+        </div>
+      </div>
+
+      <div class="overflow-auto mt-4">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-600 border-b">
+              <th class="py-2 pr-2">Seri</th>
+              <th class="py-2 pr-2">Bölge</th>
+              <th class="py-2 pr-2">DLP (mGy·cm)</th>
+              <th class="py-2 pr-2">k (mSv/(mGy·cm))</th>
+              <th class="py-2 pr-2">mSv</th>
+              <th class="py-2 pr-2"></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+          <tfoot>
+            <tr class="border-t">
+              <td class="py-3 pr-2 text-right font-semibold" colspan="2">Toplam</td>
+              <td class="py-3 pr-2 mono" id="sumDLP">0</td>
+              <td class="py-3 pr-2 text-gray-300">—</td>
+              <td class="py-3 pr-2 mono font-bold" id="sumMSV">0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button id="copy" class="px-3 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold">Sonucu Kopyala</button>
+        <span id="copied" class="text-xs text-green-700 hidden">Kopyalandı.</span>
+      </div>
+    </section>
+
+    <section class="mt-6 grid md:grid-cols-2 gap-4">
+      <div class="card p-5">
+        <h2 class="font-bold mb-2">Bölge → k (erişkin, tipik)</h2>
+        <ul class="text-sm grid grid-cols-2 gap-y-1">
+          <li><span class="text-gray-600">Beyin</span> <span class="mono">0.0021</span></li>
+          <li><span class="text-gray-600">Boyun/Servikal</span> <span class="mono">0.0059</span></li>
+          <li><span class="text-gray-600">Toraks</span> <span class="mono">0.014</span></li>
+          <li><span class="text-gray-600">Abdomen</span> <span class="mono">0.015</span></li>
+          <li><span class="text-gray-600">Pelvis/LS</span> <span class="mono">0.019</span></li>
+          <li><span class="text-gray-600">Abdomen-Pelvis</span> <span class="mono">0.015</span></li>
+          <li><span class="text-gray-600">Toraks-Abdomen-Pelvis</span> <span class="mono">0.015</span></li>
+          <li><span class="text-gray-600">Torakal omurga</span> <span class="mono">0.015</span></li>
+        </ul>
+        <p class="text-xs text-gray-600 mt-3">Not: k değerleri yaklaşık olup üretici/protokol/beden dağılımına göre %20–40 değişebilir. Çok fazlı incelemelerde faz başına ayrı satır ekleyin.</p>
+      </div>
+      <div class="card p-5">
+        <h2 class="font-bold mb-2">İpuçları</h2>
+        <ul class="list-disc pl-5 text-sm space-y-1">
+          <li>Tek bir "Total Exam DLP" varsa ve gövde taramasıysa, <span class="mono">0.015</span> makuldür.</li>
+          <li>Katsayıyı manuel düzenleyerek lokal protokol farklılıklarını yansıtabilirsiniz.</li>
+          <li>Sonuç mSv, popülasyon temelli risk karşılaştırması içindir; bireysel organ dozlarının yerine geçmez.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <template id="rowTpl">
+    <tr class="border-b last:border-b-0">
+      <td class="py-2 pr-2">
+        <input type="text" class="w-28 rounded-lg border px-2 py-1" placeholder="Helikal" />
+      </td>
+      <td class="py-2 pr-2">
+        <select class="w-56 rounded-lg border px-2 py-1 bg-white">
+          <option value="abdomen">Abdomen</option>
+          <option value="pelvis">Pelvis / Lomber</option>
+          <option value="ap">Abdomen-Pelvis</option>
+          <option value="tap">Toraks-Abdomen-Pelvis (TAP/CAP)</option>
+          <option value="chest">Toraks</option>
+          <option value="head">Beyin</option>
+          <option value="neck">Boyun/Servikal</option>
+          <option value="tspine">Torakal omurga</option>
+        </select>
+      </td>
+      <td class="py-2 pr-2">
+        <input type="number" step="0.01" min="0" class="w-36 rounded-lg border px-2 py-1 mono" placeholder="DLP" />
+      </td>
+      <td class="py-2 pr-2">
+        <input type="number" step="0.0001" min="0" class="w-36 rounded-lg border px-2 py-1 mono k-input" />
+      </td>
+      <td class="py-2 pr-2 mono font-semibold">0</td>
+      <td class="py-2 pr-2">
+        <button class="text-red-600 hover:underline">Sil</button>
+      </td>
+    </tr>
+  </template>
+
+  <script>
+    const K_MAP = {
+      head: 0.0021,
+      neck: 0.0059,
+      chest: 0.014,
+      abdomen: 0.015,
+      pelvis: 0.019,
+      ap: 0.015,
+      tap: 0.015,
+      tspine: 0.015,
+    };
+
+    const $rows = document.getElementById('rows');
+    const $tpl = document.getElementById('rowTpl');
+
+    function addRow(pref={ series:'Helikal', region:'abdomen', dlp:'', k:'' }){
+      const node = $tpl.content.cloneNode(true);
+      const tds = node.querySelectorAll('td');
+      const [$series,$region,$dlp,$k,$msv,$del] = tds;
+      $series.querySelector('input').value = pref.series;
+      $region.querySelector('select').value = pref.region;
+      $dlp.querySelector('input').value = pref.dlp;
+      const regionK = K_MAP[pref.region] ?? 0.015;
+      $k.querySelector('input').value = (pref.k!==''?pref.k:regionK);
+
+      function recalc(){
+        const dlp = parseFloat($dlp.querySelector('input').value||0);
+        const k = parseFloat($k.querySelector('input').value||0);
+        const msv = dlp * k;
+        $msv.textContent = isFinite(msv)? msv.toFixed(2) : '0';
+        sumAll();
+      }
+
+      $region.querySelector('select').addEventListener('change', e=>{
+        const autoK = K_MAP[e.target.value] ?? 0.015;
+        const kInput = $k.querySelector('input');
+        // Sadece kullanıcı değiştirmediyse veya önceki k, eski oto-k ile aynıysa güncelle
+        const current = parseFloat(kInput.value||0);
+        if(Object.values(K_MAP).includes(current)){
+          kInput.value = autoK;
+        }
+        recalc();
+      });
+
+      [$dlp.querySelector('input'), $k.querySelector('input')].forEach(el=>{
+        el.addEventListener('input', recalc);
+      });
+
+      $del.querySelector('button').addEventListener('click', ()=>{
+        node.firstElementChild.remove();
+        sumAll();
+      });
+
+      $rows.appendChild(node);
+      // İlk hesap
+      setTimeout(()=>{
+        // node is DocumentFragment -> last child is the <tr>
+        recalc();
+      });
+    }
+
+    function sumAll(){
+      let sumDLP = 0, sumMSV = 0;
+      [...$rows.querySelectorAll('tr')].forEach(tr=>{
+        const dlp = parseFloat(tr.children[2].querySelector('input').value||0);
+        const msv = parseFloat(tr.children[4].textContent||0);
+        sumDLP += dlp; sumMSV += msv;
+      });
+      document.getElementById('sumDLP').textContent = sumDLP.toFixed(2);
+      document.getElementById('sumMSV').textContent = sumMSV.toFixed(2);
+    }
+
+    // Actions
+    document.getElementById('addRow').addEventListener('click', ()=> addRow());
+    document.getElementById('reset').addEventListener('click', ()=>{ $rows.innerHTML=''; sumAll(); addRow(); });
+
+    document.getElementById('copy').addEventListener('click', ()=>{
+      const totalDLP = document.getElementById('sumDLP').textContent;
+      const totalMSV = document.getElementById('sumMSV').textContent;
+      const lines = [
+        'DLP → mSv Hesabı',
+        ...[...$rows.querySelectorAll('tr')].map((tr,i)=>{
+          const series = tr.children[0].querySelector('input').value||`Seri ${i+1}`;
+          const regionText = tr.children[1].querySelector('select').selectedOptions[0].textContent;
+          const dlp = tr.children[2].querySelector('input').value||'0';
+          const k = tr.children[3].querySelector('input').value||'0';
+          const msv = tr.children[4].textContent||'0';
+          return `• ${series} – ${regionText}: DLP ${dlp} × k ${k} = ≈ ${msv} mSv`;
+        }),
+        `Toplam DLP: ${totalDLP}`,
+        `Toplam ≈ ${totalMSV} mSv`
+      ].flat().join('\n');
+      navigator.clipboard.writeText(lines).then(()=>{
+        const el = document.getElementById('copied');
+        el.classList.remove('hidden');
+        setTimeout(()=>el.classList.add('hidden'), 1500);
+      });
+    });
+
+    // Başlangıç satırı
+    addRow({ series:'Helikal', region:'abdomen', dlp:'806.7', k:'' });
+  </script>
+</body>
+</html>
