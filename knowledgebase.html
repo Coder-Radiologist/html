@@ -1,0 +1,1759 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radiology Knowledge Base - Multi Storage</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google API Client -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    
+    <!-- Dropbox SDK -->
+    <script src="https://unpkg.com/dropbox@10.34.0/dist/Dropbox-sdk.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 i {
+            color: #667eea;
+        }
+
+        /* Storage Selector */
+        .storage-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .storage-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .storage-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .storage-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .storage-btn.connected {
+            border-color: #48bb78;
+        }
+
+        .storage-btn .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+
+        .storage-btn.connected .status-dot {
+            background: #48bb78;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: calc(100vh - 160px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .category-filters {
+            margin-bottom: 20px;
+        }
+
+        .category-filters h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .filter-tag {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .filter-tag:hover {
+            background: #e0e0e0;
+        }
+
+        .filter-tag.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .notes-list {
+            margin-top: 20px;
+        }
+
+        .notes-list h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .note-item {
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+            position: relative;
+        }
+
+        .note-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .note-item.active {
+            background: #667eea;
+            color: white;
+            border-left-color: #764ba2;
+        }
+
+        .note-item .note-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .note-item .note-date {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        .note-item .note-tags {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .note-item .note-tag {
+            font-size: 10px;
+            padding: 3px 8px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        .note-item .storage-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        /* Editor Area */
+        .editor-area {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-toolbar {
+            padding: 15px 20px;
+            background: #f8f8f8;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: white;
+            border: 2px solid #e0e0e0;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+            border-color: #48bb78;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+            border-color: #f56565;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+            border-color: #f59e0b;
+        }
+
+        .note-meta {
+            padding: 15px 20px;
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .meta-input {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .meta-input input, .meta-input select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .meta-input input:focus, .meta-input select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .tag-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .tag-input-container input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .current-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .tag-badge {
+            padding: 5px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 15px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag-badge i {
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        .tag-badge i:hover {
+            opacity: 1;
+        }
+
+        /* Format Toolbar */
+        .format-toolbar {
+            padding: 10px 20px;
+            background: #fafafa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .format-group {
+            display: flex;
+            gap: 5px;
+            padding: 0 10px;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .format-group:last-child {
+            border-right: none;
+        }
+
+        .format-btn {
+            padding: 5px 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .format-btn:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        .format-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Rich Text Editor Area */
+        #editor {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            min-height: 400px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        #editor:focus {
+            outline: none;
+        }
+
+        /* Content specific styles */
+        #editor h1 { font-size: 2em; margin: 0.67em 0; font-weight: bold; }
+        #editor h2 { font-size: 1.5em; margin: 0.75em 0; font-weight: bold; }
+        #editor h3 { font-size: 1.17em; margin: 0.83em 0; font-weight: bold; }
+        #editor p { margin: 1em 0; }
+        #editor ul, #editor ol { margin: 1em 0; padding-left: 40px; }
+        #editor li { margin: 0.5em 0; }
+        #editor blockquote { 
+            margin: 1em 40px;
+            padding-left: 15px;
+            border-left: 4px solid #667eea;
+            color: #666;
+        }
+        #editor code {
+            background: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        #editor pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        #editor img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+        }
+        #editor table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        #editor table td, #editor table th {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        #editor table th {
+            background: #f4f4f4;
+            font-weight: bold;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            padding: 10px 20px;
+            background: #f8f8f8;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .stats-bar .stats-left {
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #48bb78;
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+
+            .header-content {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-x-ray"></i> Radiology Knowledge Base</h1>
+                <!-- YENİ BUTON BURAYA -->
+                <button class="btn" onclick="openColorPicker()" title="Tema Rengi" style="margin-left: auto; margin-right: 10px;">
+                    <i class="fas fa-palette"></i> Tema
+                </button>
+                <div class="storage-selector">
+                    <button class="storage-btn active" onclick="switchStorage('local')" id="localBtn">
+                        <i class="fas fa-laptop"></i> Lokal
+                        <span class="status-dot"></span>
+                    </button>
+                    <button class="storage-btn" onclick="switchStorage('folder')" id="folderBtn">
+                        <i class="fas fa-folder"></i> Klasör
+                        <span class="status-dot"></span>
+                    </button>
+                    <button class="storage-btn" onclick="switchStorage('google')" id="googleBtn">
+                        <i class="fab fa-google-drive"></i> Google Drive
+                        <span class="status-dot"></span>
+                    </button>
+                    <button class="storage-btn" onclick="switchStorage('dropbox')" id="dropboxBtn">
+                        <i class="fab fa-dropbox"></i> Dropbox
+                        <span class="status-dot"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Ara... (örn: ARJ, sfinkter)">
+                    <i class="fas fa-search"></i>
+                </div>
+
+                <div class="category-filters">
+                    <h3>Modalite</h3>
+                    <div class="filter-tags">
+                        <div class="filter-tag" data-filter="MR">MR</div>
+                        <div class="filter-tag" data-filter="CT">CT</div>
+                        <div class="filter-tag" data-filter="US">US</div>
+                        <div class="filter-tag" data-filter="X-Ray">X-Ray</div>
+                    </div>
+                </div>
+
+                <div class="category-filters">
+                    <h3>Anatomik Bölge</h3>
+                    <div class="filter-tags">
+                        <div class="filter-tag" data-filter="Radyoloji Fiziği">Rad. Fiziği</div>
+                        <div class="filter-tag" data-filter="Baş-Boyun">Baş-Boyun</div>
+                        <div class="filter-tag" data-filter="Abdomen">Abdomen</div>
+                        <div class="filter-tag" data-filter="Thorax">Thorax</div>
+                        <div class="filter-tag" data-filter="MSK">MSK</div>
+                        <div class="filter-tag" data-filter="Nöro">Nöro</div>
+                        <div class="filter-tag" data-filter="Pelvis">Pelvis</div>
+                    </div>
+                </div>
+
+                <div class="notes-list">
+                    <h3>Notlar (<span id="noteCount">0</span>)</h3>
+                    <div id="notesList"></div>
+                </div>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="editor-area">
+                <div class="editor-toolbar">
+                    <div class="editor-actions">
+                        <button class="btn btn-primary" onclick="createNewNote()">
+                            <i class="fas fa-plus"></i> Yeni Not
+                        </button>
+                        <button class="btn btn-success" onclick="saveNote()">
+                            <i class="fas fa-save"></i> Kaydet
+                        </button>
+                        <button class="btn btn-warning" onclick="syncNotes()">
+                            <i class="fas fa-sync"></i> Senkronize
+                        </button>
+                        <button class="btn" onclick="exportNote()">
+                            <i class="fas fa-download"></i> Dışa Aktar
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteNote()">
+                            <i class="fas fa-trash"></i> Sil
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn" onclick="toggleFullscreen()">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="note-meta">
+                    <div class="meta-input">
+                        <input type="text" id="noteTitle" placeholder="Not Başlığı">
+                        <select id="noteModality">
+                            <option value="">Modalite Seç</option>
+                            <option value="MR">MR</option>
+                            <option value="CT">CT</option>
+                            <option value="US">US</option>
+                            <option value="X-Ray">X-Ray</option>
+                            <option value="PET-CT">PET-CT</option>
+                            <option value="Anjiografi">Anjiografi</option>
+                        </select>
+                        <select id="noteRegion">
+                            <option value="">Bölge Seç</option>
+                            <option value="Radyoloji Fiziği">Radyoloji Fiziği</option>
+                            <option value="Baş-Boyun">Boyun</option>
+                            <option value="Abdomen">Abdomen</option>
+                            <option value="Thorax">Thorax</option>
+                            <option value="Kardiyak">Kardiyak</option>
+                            <option value="MSK">MSK</option>
+                            <option value="Nöro">Nöro</option>
+                            <option value="Pelvis">Pelvis</option>
+                        </select>
+                    </div>
+                    <div class="tag-input-container">
+                        <input type="text" id="tagInput" placeholder="Tag ekle (Enter ile ekle)">
+                        <button class="btn btn-primary" onclick="addTag()">
+                            <i class="fas fa-tag"></i> Ekle
+                        </button>
+                    </div>
+                    <div class="current-tags" id="currentTags"></div>
+                </div>
+
+                <!-- Format Toolbar -->
+                <div class="format-toolbar">
+                    <div class="format-group">
+                        <button class="format-btn" onclick="formatText('bold')" title="Kalın">
+                            <i class="fas fa-bold"></i>
+                        </button>
+                        <button class="format-btn" onclick="formatText('italic')" title="İtalik">
+                            <i class="fas fa-italic"></i>
+                        </button>
+                        <button class="format-btn" onclick="formatText('underline')" title="Altı Çizgili">
+                            <i class="fas fa-underline"></i>
+                        </button>
+                    </div>
+                    <div class="format-group">
+                        <button class="format-btn" onclick="formatText('insertUnorderedList')" title="Liste">
+                            <i class="fas fa-list-ul"></i>
+                        </button>
+                        <button class="format-btn" onclick="formatText('insertOrderedList')" title="Numaralı Liste">
+                            <i class="fas fa-list-ol"></i>
+                        </button>
+                    </div>
+                    <div class="format-group">
+                        <button class="format-btn" onclick="insertHeading('h1')" title="Başlık 1">H1</button>
+                        <button class="format-btn" onclick="insertHeading('h2')" title="Başlık 2">H2</button>
+                        <button class="format-btn" onclick="insertHeading('h3')" title="Başlık 3">H3</button>
+                    </div>
+                    <div class="format-group">
+                        <button class="format-btn" onclick="insertImage()" title="Resim Ekle">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <button class="format-btn" onclick="insertTable()" title="Tablo Ekle">
+                            <i class="fas fa-table"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ContentEditable Editor -->
+                <div id="editor" contenteditable="true"></div>
+
+                <div class="stats-bar">
+                    <div class="stats-left">
+                        <span><i class="fas fa-calendar"></i> Oluşturulma: <span id="createdDate">-</span></span>
+                        <span><i class="fas fa-edit"></i> Son Düzenleme: <span id="modifiedDate">-</span></span>
+                    </div>
+                    <div>
+                        <span id="wordCount">0 kelime</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Notu Sil</h2>
+            </div>
+            <div class="modal-body">
+                <p>Bu notu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">İptal</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Sil</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Storage Management
+        let currentStorage = 'local';
+        let storageHandles = {
+            folder: null,
+            google: null,
+            dropbox: null
+        };
+        
+        // Current note state
+        let currentNote = null;
+        let notes = [];
+        
+        // Editor element
+        const editor = document.getElementById('editor');
+        
+        // Storage Interface
+        const StorageAPI = {
+            local: {
+                async init() {
+                    return true;
+                },
+                async loadNotes() {
+                    const stored = localStorage.getItem('radiology_notes');
+                    return stored ? JSON.parse(stored) : [];
+                },
+                async saveNotes(notes) {
+                    localStorage.setItem('radiology_notes', JSON.stringify(notes));
+                    return true;
+                }
+            },
+            
+            folder: {
+                async init() {
+                    try {
+                        if (!storageHandles.folder) {
+                            storageHandles.folder = await window.showDirectoryPicker({
+                                mode: 'readwrite',
+                                startIn: 'documents'
+                            });
+                        }
+                        return true;
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.error('Folder access error:', err);
+                        }
+                        return false;
+                    }
+                },
+                async loadNotes() {
+                    if (!storageHandles.folder) return [];
+                    
+                    try {
+                        const notesFile = await storageHandles.folder.getFileHandle('radiology_notes.json', { create: false });
+                        const file = await notesFile.getFile();
+                        const text = await file.text();
+                        return JSON.parse(text);
+                    } catch (err) {
+                        return [];
+                    }
+                },
+                async saveNotes(notes) {
+                    if (!storageHandles.folder) return false;
+                    
+                    try {
+                        const notesFile = await storageHandles.folder.getFileHandle('radiology_notes.json', { create: true });
+                        const writable = await notesFile.createWritable();
+                        await writable.write(JSON.stringify(notes, null, 2));
+                        await writable.close();
+                        return true;
+                    } catch (err) {
+                        console.error('Save error:', err);
+                        return false;
+                    }
+                }
+            },
+            
+                
+            google: {
+                CLIENT_ID: 'YOUR_GOOGLE_CLIENT_ID',
+                API_KEY: 'YOUR_GOOGLE_API_KEY',
+                DISCOVERY_DOCS: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+                SCOPES: 'https://www.googleapis.com/auth/drive.file',
+                
+                async checkConfig() {
+                    let config = JSON.parse(localStorage.getItem('google_config') || '{}');
+                    if (!config.clientId || !config.apiKey) {
+                        const clientId = prompt('Google Client ID girin:');
+                        const apiKey = prompt('Google API Key girin:');
+                        if (clientId && apiKey) {
+                            config = { clientId, apiKey };
+                            localStorage.setItem('google_config', JSON.stringify(config));
+                        } else {
+                            return false;
+                        }
+                    }
+                    this.CLIENT_ID = config.clientId;
+                    this.API_KEY = config.apiKey;
+                    return true;
+                },
+
+                async init() {
+                    try {
+                        // ÖNEMLİ: Önce config kontrolü
+                        if (!await this.checkConfig()) {
+                            alert('Google Drive kullanmak için API bilgileri gerekli.');
+                            return false;
+                        }
+                        await new Promise((resolve, reject) => {
+                            gapi.load('client:auth2', resolve);
+                        });
+                        
+                        await gapi.client.init({
+                            apiKey: this.API_KEY,
+                            clientId: this.CLIENT_ID,
+                            discoveryDocs: this.DISCOVERY_DOCS,
+                            scope: this.SCOPES
+                        });
+                        
+                        const authInstance = gapi.auth2.getAuthInstance();
+                        if (!authInstance.isSignedIn.get()) {
+                            await authInstance.signIn();
+                        }
+                        
+                        storageHandles.google = true;
+                        return true;
+                    } catch (err) {
+                        console.error('Google Drive init error:', err);
+                        alert('Google Drive bağlantısı için API anahtarları gerekli. Lütfen dokümantasyonu kontrol edin.');
+                        return false;
+                    }
+                },
+                
+                async loadNotes() {
+                    if (!storageHandles.google) return [];
+                    
+                    try {
+                        // Search for the notes file
+                        const response = await gapi.client.drive.files.list({
+                            q: "name='radiology_notes.json'",
+                            spaces: 'drive',
+                            fields: 'files(id, name)'
+                        });
+                        
+                        if (response.result.files && response.result.files.length > 0) {
+                            const fileId = response.result.files[0].id;
+                            const file = await gapi.client.drive.files.get({
+                                fileId: fileId,
+                                alt: 'media'
+                            });
+                            return JSON.parse(file.body);
+                        }
+                        return [];
+                    } catch (err) {
+                        console.error('Google Drive load error:', err);
+                        return [];
+                    }
+                },
+                
+                async saveNotes(notes) {
+                    if (!storageHandles.google) return false;
+                    
+                    try {
+                        const boundary = '-------314159265358979323846';
+                        const delimiter = "\r\n--" + boundary + "\r\n";
+                        const close_delim = "\r\n--" + boundary + "--";
+                        
+                        const contentType = 'application/json';
+                        const metadata = {
+                            'name': 'radiology_notes.json',
+                            'mimeType': contentType
+                        };
+                        
+                        const multipartRequestBody =
+                            delimiter +
+                            'Content-Type: application/json\r\n\r\n' +
+                            JSON.stringify(metadata) +
+                            delimiter +
+                            'Content-Type: ' + contentType + '\r\n\r\n' +
+                            JSON.stringify(notes, null, 2) +
+                            close_delim;
+                        
+                        const request = gapi.client.request({
+                            'path': '/upload/drive/v3/files',
+                            'method': 'POST',
+                            'params': {'uploadType': 'multipart'},
+                            'headers': {
+                                'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+                            },
+                            'body': multipartRequestBody
+                        });
+                        
+                        await request.execute();
+                        return true;
+                    } catch (err) {
+                        console.error('Google Drive save error:', err);
+                        return false;
+                    }
+                }
+            },
+            
+            dropbox: {
+                ACCESS_TOKEN: 'YOUR_DROPBOX_ACCESS_TOKEN',
+                
+                async checkConfig() {
+                    let token = localStorage.getItem('dropbox_token');
+                    if (!token) {
+                        token = prompt('Dropbox Access Token girin:');
+                        if (token) {
+                            localStorage.setItem('dropbox_token', token);
+                        } else {
+                            return false;
+                        }
+                    }
+
+                    this.ACCESS_TOKEN = token;
+                    return true;
+                },
+                
+                async init() {
+                    if (!await this.checkConfig()) {
+                        alert('Dropbox kullanmak için Access Token gerekli.');
+                        return false;
+                    }
+                    try {
+                        if (!this.ACCESS_TOKEN || this.ACCESS_TOKEN === 'YOUR_DROPBOX_ACCESS_TOKEN') {
+                            alert('Dropbox bağlantısı için Access Token gerekli. Lütfen dokümantasyonu kontrol edin.');
+                            return false;
+                        }
+                        
+                        storageHandles.dropbox = new Dropbox.Dropbox({ 
+                            accessToken: this.ACCESS_TOKEN,
+                            fetch: fetch
+                        });
+                        
+                        // Test connection
+                        await storageHandles.dropbox.usersGetCurrentAccount();
+                        return true;
+                    } catch (err) {
+                        console.error('Dropbox init error:', err);
+                        return false;
+                    }
+                },
+                
+                async loadNotes() {
+                    if (!storageHandles.dropbox) return [];
+                    
+                    try {
+                        const response = await storageHandles.dropbox.filesDownload({
+                            path: '/radiology_notes.json'
+                        });
+                        
+                        const blob = response.result.fileBlob;
+                        const text = await blob.text();
+                        return JSON.parse(text);
+                    } catch (err) {
+                        if (err.status === 409) { // File not found
+                            return [];
+                        }
+                        console.error('Dropbox load error:', err);
+                        return [];
+                    }
+                },
+                
+                async saveNotes(notes) {
+                    if (!storageHandles.dropbox) return false;
+                    
+                    try {
+                        const contents = JSON.stringify(notes, null, 2);
+                        await storageHandles.dropbox.filesUpload({
+                            path: '/radiology_notes.json',
+                            contents: contents,
+                            mode: 'overwrite'
+                        });
+                        return true;
+                    } catch (err) {
+                        console.error('Dropbox save error:', err);
+                        return false;
+                    }
+                }
+            }
+        };
+        
+        // Switch storage type
+        async function switchStorage(type) {
+            // Save current notes before switching
+            if (currentNote) {
+                await saveNote();
+            }
+            
+            // Update UI
+            document.querySelectorAll('.storage-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(type + 'Btn').classList.add('active');
+            
+            // Initialize new storage
+            const initialized = await StorageAPI[type].init();
+            if (initialized) {
+                document.getElementById(type + 'Btn').classList.add('connected');
+                currentStorage = type;
+                
+                // Load notes from new storage
+                notes = await StorageAPI[type].loadNotes();
+                displayNotes();
+                
+                if (notes.length === 0 && type !== 'local') {
+                    showToast(`${type} depolama alanı boş. Notlarınızı senkronize etmek ister misiniz?`, 'info');
+                }
+            } else {
+                // Revert to previous storage
+                document.getElementById(currentStorage + 'Btn').classList.add('active');
+                showToast(`${type} depolama alanına bağlanılamadı`, 'error');
+            }
+        }
+        
+        // Sync notes across storages
+        async function syncNotes() {
+            const btn = event.target.closest('.btn');
+            btn.innerHTML = '<span class="spinner"></span> Senkronize ediliyor...';
+            btn.disabled = true;
+            
+            try {
+                // Get notes from all connected storages
+                const allNotes = new Map();
+                
+                for (const [storage, api] of Object.entries(StorageAPI)) {
+                    if (storage === 'local' || storageHandles[storage]) {
+                        const storageNotes = await api.loadNotes();
+                        storageNotes.forEach(note => {
+                            if (!allNotes.has(note.id) || new Date(note.modified) > new Date(allNotes.get(note.id).modified)) {
+                                allNotes.set(note.id, { ...note, storage });
+                            }
+                        });
+                    }
+                }
+                
+                // Convert to array and sort
+                notes = Array.from(allNotes.values()).sort((a, b) => 
+                    new Date(b.modified) - new Date(a.modified)
+                );
+                
+                // Save to current storage
+                await StorageAPI[currentStorage].saveNotes(notes);
+                
+                displayNotes();
+                showToast('Notlar senkronize edildi', 'success');
+            } catch (err) {
+                console.error('Sync error:', err);
+                showToast('Senkronizasyon hatası', 'error');
+            } finally {
+                btn.innerHTML = '<i class="fas fa-sync"></i> Senkronize';
+                btn.disabled = false;
+            }
+        }
+        
+        // Load notes
+        async function loadNotes() {
+            notes = await StorageAPI[currentStorage].loadNotes();
+            displayNotes();
+            
+            // Load sample note if empty
+            if (notes.length === 0) {
+                createSampleNote();
+            }
+        }
+        
+        // Display notes in sidebar
+        function displayNotes(filteredNotes = null) {
+            const notesToDisplay = filteredNotes || notes;
+            const notesList = document.getElementById('notesList');
+            notesList.innerHTML = '';
+            
+            notesToDisplay.forEach(note => {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note-item';
+                if (currentNote && currentNote.id === note.id) {
+                    noteDiv.classList.add('active');
+                }
+                
+                // Storage icon
+                let storageIcon = '';
+                if (note.storage) {
+                    const icons = {
+                        local: 'fas fa-laptop',
+                        folder: 'fas fa-folder',
+                        google: 'fab fa-google-drive',
+                        dropbox: 'fab fa-dropbox'
+                    };
+                    storageIcon = `<i class="${icons[note.storage]} storage-icon"></i>`;
+                }
+                
+                noteDiv.innerHTML = `
+                    ${storageIcon}
+                    <div class="note-title">${note.title || 'Başlıksız Not'}</div>
+                    <div class="note-date">${new Date(note.modified).toLocaleDateString('tr-TR')}</div>
+                    <div class="note-tags">
+                        ${note.modality ? `<span class="note-tag">${note.modality}</span>` : ''}
+                        ${note.region ? `<span class="note-tag">${note.region}</span>` : ''}
+                        ${(note.tags || []).slice(0, 2).map(tag => `<span class="note-tag">${tag}</span>`).join('')}
+                    </div>
+                `;
+                
+                noteDiv.onclick = () => loadNote(note.id);
+                notesList.appendChild(noteDiv);
+            });
+            
+            document.getElementById('noteCount').textContent = notesToDisplay.length;
+        }
+        
+        // Create new note
+        function createNewNote() {
+            currentNote = {
+                id: Date.now().toString(),
+                title: '',
+                content: '',
+                modality: '',
+                region: '',
+                tags: [],
+                storage: currentStorage,
+                created: new Date().toISOString(),
+                modified: new Date().toISOString()
+            };
+            
+            // Clear editor and fields
+            editor.innerHTML = '';
+            document.getElementById('noteTitle').value = '';
+            document.getElementById('noteModality').value = '';
+            document.getElementById('noteRegion').value = '';
+            document.getElementById('currentTags').innerHTML = '';
+            document.getElementById('createdDate').textContent = new Date().toLocaleDateString('tr-TR');
+            document.getElementById('modifiedDate').textContent = new Date().toLocaleDateString('tr-TR');
+            
+            displayNotes();
+            showToast('Yeni not oluşturuldu', 'success');
+        }
+        
+        // Save current note
+        async function saveNote() {
+            if (!currentNote) {
+                showToast('Lütfen önce bir not oluşturun', 'error');
+                return;
+            }
+            
+            currentNote.title = document.getElementById('noteTitle').value || 'Başlıksız Not';
+            currentNote.content = editor.innerHTML;
+            currentNote.modality = document.getElementById('noteModality').value;
+            currentNote.region = document.getElementById('noteRegion').value;
+            currentNote.modified = new Date().toISOString();
+            currentNote.storage = currentStorage;
+            
+            // Check if note exists
+            const existingIndex = notes.findIndex(n => n.id === currentNote.id);
+            if (existingIndex >= 0) {
+                notes[existingIndex] = currentNote;
+            } else {
+                notes.unshift(currentNote);
+            }
+            
+            // Save to current storage
+            const saved = await StorageAPI[currentStorage].saveNotes(notes);
+            
+            if (saved) {
+                displayNotes();
+                showToast('Not kaydedildi', 'success');
+            } else {
+                showToast('Kaydetme hatası', 'error');
+            }
+        }
+        
+        // Load a specific note
+        function loadNote(noteId) {
+            const note = notes.find(n => n.id === noteId);
+            if (note) {
+                currentNote = {...note};
+                currentNote.tags = currentNote.tags || [];
+                
+                // Load content
+                editor.innerHTML = note.content || '';
+                document.getElementById('noteTitle').value = note.title || '';
+                document.getElementById('noteModality').value = note.modality || '';
+                document.getElementById('noteRegion').value = note.region || '';
+                document.getElementById('createdDate').textContent = new Date(note.created).toLocaleDateString('tr-TR');
+                document.getElementById('modifiedDate').textContent = new Date(note.modified).toLocaleDateString('tr-TR');
+                
+                // Load tags
+                displayCurrentTags();
+                
+                displayNotes();
+                updateWordCount();
+            }
+        }
+        
+        // Delete note
+        function deleteNote() {
+            if (!currentNote) {
+                showToast('Silinecek not yok', 'error');
+                return;
+            }
+            
+            document.getElementById('deleteModal').classList.add('active');
+        }
+        
+        async function confirmDelete() {
+            notes = notes.filter(n => n.id !== currentNote.id);
+            await StorageAPI[currentStorage].saveNotes(notes);
+            
+            currentNote = null;
+            editor.innerHTML = '';
+            document.getElementById('noteTitle').value = '';
+            document.getElementById('noteModality').value = '';
+            document.getElementById('noteRegion').value = '';
+            document.getElementById('currentTags').innerHTML = '';
+            
+            displayNotes();
+            closeModal();
+            showToast('Not silindi', 'success');
+        }
+        
+        function closeModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+        }
+        
+        // Tag management
+        function addTag() {
+            if (!currentNote) {
+                showToast('Önce bir not oluşturun', 'error');
+                return;
+            }
+            
+            const tagInput = document.getElementById('tagInput');
+            const tag = tagInput.value.trim();
+            
+            if (tag && !currentNote.tags.includes(tag)) {
+                currentNote.tags = currentNote.tags || [];
+                currentNote.tags.push(tag);
+                tagInput.value = '';
+                displayCurrentTags();
+            }
+        }
+        
+        function displayCurrentTags() {
+            if (!currentNote) return;
+            
+            const container = document.getElementById('currentTags');
+            container.innerHTML = '';
+            
+            (currentNote.tags || []).forEach(tag => {
+                const tagDiv = document.createElement('div');
+                tagDiv.className = 'tag-badge';
+                tagDiv.innerHTML = `
+                    ${tag}
+                    <i class="fas fa-times" onclick="removeTag('${tag}')"></i>
+                `;
+                container.appendChild(tagDiv);
+            });
+        }
+        
+        function removeTag(tag) {
+            if (currentNote) {
+                currentNote.tags = currentNote.tags.filter(t => t !== tag);
+                displayCurrentTags();
+            }
+        }
+        
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            
+            if (!query) {
+                displayNotes();
+                return;
+            }
+            
+            const filtered = notes.filter(note => {
+                const searchableContent = [
+                    note.title,
+                    note.content.replace(/<[^>]*>/g, ''), // Strip HTML
+                    note.modality,
+                    note.region,
+                    ...(note.tags || [])
+                ].join(' ').toLowerCase();
+                
+                return searchableContent.includes(query);
+            });
+            
+            displayNotes(filtered);
+        });
+        
+        // Filter by category
+        document.querySelectorAll('.filter-tag').forEach(tag => {
+            tag.addEventListener('click', function() {
+                this.classList.toggle('active');
+                applyFilters();
+            });
+        });
+        
+        function applyFilters() {
+            const activeFilters = Array.from(document.querySelectorAll('.filter-tag.active'))
+                .map(tag => tag.dataset.filter);
+            
+            if (activeFilters.length === 0) {
+                displayNotes();
+                return;
+            }
+            
+            const filtered = notes.filter(note => {
+                return activeFilters.some(filter => 
+                    note.modality === filter || 
+                    note.region === filter ||
+                    (note.tags || []).includes(filter)
+                );
+            });
+            
+            displayNotes(filtered);
+        }
+        
+        // Export functionality
+        function exportNote() {
+            if (!currentNote) {
+                showToast('Dışa aktarılacak not yok', 'error');
+                return;
+            }
+            
+            // Create HTML file with embedded content
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${currentNote.title || 'Radyoloji Notu'}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2, h3 { color: #333; }
+        .meta { 
+            background: #f0f0f0; 
+            padding: 10px; 
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .tag { 
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-right: 5px;
+            font-size: 12px;
+        }
+        img { max-width: 100%; height: auto; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #ddd; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h1>${currentNote.title || 'Başlıksız Not'}</h1>
+    <div class="meta">
+        <p><strong>Modalite:</strong> ${currentNote.modality || '-'}</p>
+        <p><strong>Bölge:</strong> ${currentNote.region || '-'}</p>
+        <p><strong>Oluşturulma:</strong> ${new Date(currentNote.created).toLocaleDateString('tr-TR')}</p>
+        <p><strong>Son Düzenleme:</strong> ${new Date(currentNote.modified).toLocaleDateString('tr-TR')}</p>
+        <p><strong>Etiketler:</strong> ${(currentNote.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</p>
+    </div>
+    <div class="content">
+        ${currentNote.content}
+    </div>
+</body>
+</html>`;
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentNote.title || 'not'}_${Date.now()}.html`;
+            a.click();
+            
+            showToast('Not HTML olarak dışa aktarıldı', 'success');
+        }
+        
+        // Format text functions
+        function formatText(command) {
+            document.execCommand(command, false, null);
+            editor.focus();
+        }
+        
+        function insertHeading(tag) {
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            const selectedText = range.toString() || 'Başlık';
+            
+            const heading = document.createElement(tag);
+            heading.textContent = selectedText;
+            
+            range.deleteContents();
+            range.insertNode(heading);
+            
+            editor.focus();
+        }
+        
+        function insertImage() {
+            const url = prompt('Resim URL\'sini girin:');
+            if (url) {
+                document.execCommand('insertImage', false, url);
+                editor.focus();
+            }
+        }
+        
+        function insertTable() {
+            const rows = prompt('Satır sayısı:', '3') || '3';
+            const cols = prompt('Sütun sayısı:', '3') || '3';
+            
+            let tableHtml = '<table><tbody>';
+            for (let i = 0; i < parseInt(rows); i++) {
+                tableHtml += '<tr>';
+                for (let j = 0; j < parseInt(cols); j++) {
+                    tableHtml += `<td>Hücre ${i+1}-${j+1}</td>`;
+                }
+                tableHtml += '</tr>';
+            }
+            tableHtml += '</tbody></table><br>';
+            
+            document.execCommand('insertHTML', false, tableHtml);
+            editor.focus();
+        }
+        
+        // Word count
+        function updateWordCount() {
+            const text = editor.innerText || editor.textContent || '';
+            const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+            document.getElementById('wordCount').textContent = `${words.length} kelime`;
+        }
+        
+        editor.addEventListener('input', updateWordCount);
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+S to save
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                saveNote();
+            }
+            
+            // Ctrl+N for new note
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                createNewNote();
+            }
+            
+            // Ctrl+F to focus search
+            if (e.ctrlKey && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            
+            // Ctrl+B for bold
+            if (e.ctrlKey && e.key === 'b') {
+                e.preventDefault();
+                formatText('bold');
+            }
+            
+            // Ctrl+I for italic
+            if (e.ctrlKey && e.key === 'i') {
+                e.preventDefault();
+                formatText('italic');
+            }
+            
+            // Ctrl+U for underline
+            if (e.ctrlKey && e.key === 'u') {
+                e.preventDefault();
+                formatText('underline');
+            }
+        });
+        
+        // Tag input enter key
+        document.getElementById('tagInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTag();
+            }
+        });
+        
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = type === 'error' ? '#f56565' : 
+                                     type === 'info' ? '#3182ce' : '#48bb78';
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Fullscreen toggle
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        // Preserve formatting on paste
+        editor.addEventListener('paste', function(e) {
+            e.preventDefault();
+            
+            let paste = (e.clipboardData || window.clipboardData).getData('text/html');
+            
+            if (!paste) {
+                paste = (e.clipboardData || window.clipboardData).getData('text');
+                paste = paste.replace(/\n/g, '<br>');
+            }
+            
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            
+            selection.deleteFromDocument();
+            const range = selection.getRangeAt(0);
+            const fragment = range.createContextualFragment(paste);
+            range.insertNode(fragment);
+            
+            // Move cursor to end of inserted content
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        });
+        
+        // Create sample note
+        function createSampleNote() {
+            const sampleNote = {
+                id: '1',
+                title: 'Anorektal Junction (ARJ) Çizimi - Pratik Yöntemler',
+                content: `
+                    <h2>ARJ Çizimi için 3-Nokta Tekniği</h2>
+                    <p><strong>Sagittal T2'de şu 3 noktayı belirleyin:</strong></p>
+                    <ol>
+                        <li><strong>Pubis alt kenarı</strong> (anterior)</li>
+                        <li><strong>Koksiks ucu</strong> (posterior)</li>
+                        <li><strong>Puborektalis impresyonu</strong> (rektum posterior duvarında çentik)</li>
+                    </ol>
+                    <p><strong>ARJ = Puborektalis impresyonunun en derin noktası</strong></p>
+                    
+                    <h3>Hızlı Tanıma Kriterleri:</h3>
+                    <ul>
+                        <li>Rektum posterior duvarında belirgin bir <strong>çentik/girinti</strong> arayın</li>
+                        <li>Bu çentik puborektalis kasın yarattığı impresyondur</li>
+                        <li>Çentiğin <strong>en derin noktası = ARJ</strong></li>
+                        <li>Genellikle pubis alt kenarı hizasında veya 1-2 cm yukarısında</li>
+                    </ul>
+                `,
+                modality: 'MR',
+                region: 'Pelvis',
+                tags: ['ARJ', 'puborektalis', 'anorektal', 'sfinkter'],
+                storage: currentStorage,
+                created: new Date().toISOString(),
+                modified: new Date().toISOString()
+            };
+            
+            notes.push(sampleNote);
+            StorageAPI[currentStorage].saveNotes(notes);
+            displayNotes();
+            loadNote('1');
+        }
+                
+        // Theme color management
+        function openColorPicker() {
+            // Renk paleti modal oluştur
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.id = 'colorModal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>Tema Rengi Seçin</h2>
+                    </div>
+                    <div class="modal-body">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                            <div onclick="setTheme('linear-gradient(135deg, #667eea 0%, #764ba2 100%)')" style="height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Mor</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #3182ce 0%, #2563eb 100%)')" style="height: 80px; background: linear-gradient(135deg, #3182ce 0%, #2563eb 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Mavi</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)')" style="height: 80px; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Cyan</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #10b981 0%, #059669 100%)')" style="height: 80px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Yeşil</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #84cc16 0%, #65a30d 100%)')" style="height: 80px; background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Lime</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #eab308 0%, #ca8a04 100%)')" style="height: 80px; background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Sarı</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #f97316 0%, #ea580c 100%)')" style="height: 80px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Turuncu</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #ef4444 0%, #dc2626 100%)')" style="height: 80px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Kırmızı</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #ec4899 0%, #db2777 100%)')" style="height: 80px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Pembe</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #a855f7 0%, #9333ea 100%)')" style="height: 80px; background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Lila</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)')" style="height: 80px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">İndigo</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #64748b 0%, #475569 100%)')" style="height: 80px; background: linear-gradient(135deg, #64748b 0%, #475569 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Gri</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)')" style="height: 80px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Altın</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #78716c 0%, #57534e 100%)')" style="height: 80px; background: linear-gradient(135deg, #78716c 0%, #57534e 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #333'" onmouseout="this.style.border='3px solid transparent'">Kahve</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #1e293b 0%, #0f172a 100%)')" style="height: 80px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border: 3px solid transparent; transition: all 0.3s;" onmouseover="this.style.border='3px solid #667eea'" onmouseout="this.style.border='3px solid transparent'">Koyu</div>
+                            <div onclick="setTheme('linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%)')" style="height: 80px; background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #333; font-weight: bold; border: 3px solid #ddd; transition: all 0.3s;" onmouseover="this.style.border='3px solid #667eea'" onmouseout="this.style.border='3px solid #ddd'">Açık</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn" onclick="closeColorModal()">Kapat</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function setTheme(gradient) {
+            document.body.style.background = gradient;
+            localStorage.setItem('theme-gradient', gradient);
+            showToast('Tema değiştirildi', 'success');
+            closeColorModal();
+        }
+
+        function closeColorModal() {
+            const modal = document.getElementById('colorModal');
+            if (modal) modal.remove();
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme-gradient');
+        if (savedTheme) {
+            document.body.style.background = savedTheme; 
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            loadNotes();
+            
+            // Auto-save every 30 seconds
+            setInterval(() => {
+                if (currentNote && currentNote.content !== editor.innerHTML) {
+                    saveNote();
+                }
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
