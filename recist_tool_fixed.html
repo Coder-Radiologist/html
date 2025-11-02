@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RECIST 1.1 Değerlendirme Aracı</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:20px}
+    .container{max-width:1400px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+    .header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:30px;text-align:center}
+    .header h1{font-size:2em;margin-bottom:10px}
+    .header p{opacity:.9;font-size:1.1em}
+    .content{padding:30px}
+    .method-selector{margin-bottom:30px;padding:25px;background:#f8f9fa;border-radius:12px;border-left:5px solid #667eea}
+    .method-selector label{display:block;font-weight:600;margin-bottom:12px;color:#333;font-size:1.1em}
+    .method-selector select{width:100%;padding:12px;border:2px solid #ddd;border-radius:8px;font-size:16px}
+    .info-box{background:#e3f2fd;border-left:4px solid #2196f3;padding:20px;margin:20px 0;border-radius:8px;}
+    .info-box h4{color:#1565c0;margin-bottom:12px;font-size:1.1em}
+    .info-box ul{margin-left:20px;line-height:2}
+    .info-box strong{color:#0d47a1}
+    .lesion-type-tabs{display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #e9ecef}
+    .tab-btn{padding:12px 24px;background:transparent;border:none;border-bottom:3px solid transparent;cursor:pointer;font-size:16px;font-weight:600;color:#666;transition:.3s}
+    .tab-btn.active{color:#667eea;border-bottom-color:#667eea}
+    .lesion-content{display:none}
+    .lesion-content.active{display:block}
+    .add-lesion-btn{color:#fff;border:none;padding:12px 30px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:600;margin-bottom:20px}
+    #solid-content .add-lesion-btn{background:linear-gradient(135deg,#dc3545 0%,#c82333 100%)}
+    #lymphnode-content .add-lesion-btn{background:linear-gradient(135deg,#28a745 0%,#218838 100%)}
+    .lesion-table{width:100%;border-collapse:collapse;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+    .lesion-table thead{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff}
+    .lesion-table th{padding:15px;text-align:left;font-weight:600}
+    .lesion-table td{padding:12px;border-bottom:1px solid #e9ecef}
+    .lesion-table input,.lesion-table select{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px}
+    .remove-btn{background:#dc3545;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:14px}
+    .calculate-section{margin-top:30px;padding:25px;background:#f8f9fa;border-radius:12px}
+    .calculate-controls{display:flex;gap:15px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+    .calculate-btn{color:#fff;border:none;padding:12px 30px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:600}
+    .calculate-btn:nth-child(1){background:linear-gradient(135deg,#ff6b35 0%,#f7931e 100%)}
+    .calculate-btn:nth-child(2){background:linear-gradient(135deg,#28a745 0%,#218838 100%)}
+    .manage-btn{background:#6c757d;color:#fff;border:none;padding:12px 30px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:600}
+    .results{margin-top:20px;padding:20px;background:#fff;border-radius:8px;border-left:5px solid #28a745}
+    .results h3{color:#333;margin-bottom:15px}
+    .result-table{width:100%;border-collapse:collapse;margin-top:15px}
+    .result-table th,.result-table td{padding:12px;text-align:left;border:1px solid #dee2e6}
+    .result-table th{background:#e9ecef;font-weight:600}
+    .response-badge{display:inline-block;padding:8px 16px;border-radius:20px;font-weight:600;margin-top:10px;font-size:1.1em}
+    .cr{background:#d4edda;color:#155724}
+    .pr{background:#d1ecf1;color:#0c5460}
+    .sd{background:#fff3cd;color:#856404}
+    .pd{background:#f8d7da;color:#721c24}
+    .info-text{color:#666;margin-bottom:15px;font-size:14px}
+    .export-btn{background:#17a2b8;color:#fff;border:none;padding:12px 30px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:600;margin-top:10px}
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
+    .modal.active{display:flex;align-items:center;justify-content:center}
+    .modal-content{background:#fff;padding:30px;border-radius:12px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #e9ecef;padding-bottom:15px}
+    .modal-header h2{color:#333;font-size:1.5em}
+    .close-btn{background:none;border:none;font-size:28px;cursor:pointer;color:#666}
+    .location-list{list-style:none;max-height:300px;overflow-y:auto;border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:20px}
+    .location-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0}
+    .location-item:hover{background:#f8f9fa}
+    .location-text{flex:1;font-size:14px}
+    .location-text.editing{display:none}
+    .location-edit-input{display:none;flex:1;padding:6px;border:2px solid #667eea;border-radius:4px;margin-right:10px}
+    .location-edit-input.active{display:block}
+    .location-actions{display:flex;gap:8px}
+    .edit-btn,.delete-btn,.save-btn,.cancel-btn{padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:12px}
+    .edit-btn{background:#ffc107;color:#000}
+    .delete-btn{background:#dc3545;color:#fff}
+    .save-btn{background:#28a745;color:#fff}
+    .cancel-btn{background:#6c757d;color:#fff}
+    .modal-footer{display:flex;gap:10px;justify-content:space-between;margin-top:20px;padding-top:20px;border-top:2px solid #e9ecef}
+    .import-export-btns{display:flex;gap:10px}
+    .modal-btn{padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600}
+    .import-btn{background:#17a2b8;color:#fff}
+    .export-btn-modal{background:#28a745;color:#fff}
+    .clear-btn{background:#dc3545;color:#fff}
+    .close-modal-btn{background:#6c757d;color:#fff}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏥 RECIST 1.1 ve Onkolojik Yanıt Değerlendirme Aracı</h1>
+      <p>Beta sürüm - iRECIST Düzeltilmiş</p>
+    </div>
+
+    <div class="content">
+      <div class="method-selector">
+        <label for="assessmentMethod">Değerlendirme Metodu Seçiniz:</label>
+        <select id="assessmentMethod" onchange="updateMethodInfo()">
+          <option value="recist">RECIST 1.1</option>
+          <option value="mrecist">mRECIST (HCC)</option>
+          <option value="irecist">iRECIST (İmmünoterapi)</option>
+          <option value="choi">Choi Kriterleri (GIST)</option>
+        </select>
+      </div>
+
+      <div id="methodInfoBox" class="info-box"></div>
+
+      <div id="irecistControls" style="display:none;margin-bottom:20px;">
+        <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:20px;border-radius:8px;">
+          <h4 style="color:#f57c00;margin-bottom:15px;">📊 iRECIST Değerlendirme Tipi:</h4>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px;background:white;border-radius:6px;cursor:pointer;margin-bottom:10px;">
+            <input type="radio" name="irecistEval" value="first_control" checked onchange="handleIRECISTEvalChange()">
+            <span><strong>1. Kontrol Değerlendirmesi</strong> - Baseline sonrası ilk kontrol (Baseline vs 1. Kontrol)</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px;background:white;border-radius:6px;cursor:pointer;">
+            <input type="radio" name="irecistEval" value="confirm_iupd" onchange="handleIRECISTEvalChange()">
+            <span><strong>iUPD Sonrası Kontrol</strong> - iUPD tespit edilen hastanın 4-8 hafta sonraki kontrolü</span>
+          </label>
+          <p style="margin-top:12px;color:#666;font-size:13px;">💡 <strong>Not:</strong> Baseline her iki senaryoda da girilir. 1. kontrolde iUPD tespit edildiyse, ikinci senaryoyu seçin.</p>
+        </div>
+      </div>
+
+      <div class="lesion-type-tabs">
+        <button class="tab-btn active" data-type="solid">Solid Organ Lezyonları</button>
+        <button class="tab-btn" data-type="lymphnode">Lenf Nodları</button>
+      </div>
+
+      <div class="lesion-content active" id="solid-content">
+        <button class="add-lesion-btn" onclick="addLesion('solid')">+ Solid Organ Lezyonu Ekle</button>
+        <table class="lesion-table" id="solid-table">
+          <thead>
+            <tr>
+              <th>Lezyon</th><th>Tip</th><th>Konum</th>
+              <th class="irecist-baseline-col" style="display:none;">Baseline (mm)</th>
+              <th class="irecist-firstcontrol-col" style="display:none;">1. Kontrol (mm)</th>
+              <th class="irecist-confirmation-col" style="display:none;">iUPD Doğrulama (mm)</th>
+              <th class="standard-prev-col">Önceki (mm)</th>
+              <th class="standard-curr-col">Şimdiki (mm)</th>
+              <th class="density-col" style="display:none;">Önc. Dansite (HU)</th>
+              <th class="density-col" style="display:none;">Şim. Dansite (HU)</th>
+              <th class="enhancement-col" style="display:none;">Önc. Enhance (mm)</th>
+              <th class="enhancement-col" style="display:none;">Şim. Enhance (mm)</th>
+              <th>Notlar</th><th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="lesion-content" id="lymphnode-content">
+        <button class="add-lesion-btn" onclick="addLesion('lymphnode')">+ Lenf Nodu Ekle</button>
+        <table class="lesion-table" id="lymphnode-table">
+          <thead>
+            <tr>
+              <th>Lezyon</th><th>Konum</th>
+              <th class="irecist-baseline-col" style="display:none;">Baseline (mm)</th>
+              <th class="irecist-firstcontrol-col" style="display:none;">1. Kontrol (mm)</th>
+              <th class="irecist-confirmation-col" style="display:none;">iUPD Doğrulama (mm)</th>
+              <th class="standard-prev-col">Önceki (mm)</th>
+              <th class="standard-curr-col">Şimdiki (mm)</th>
+              <th class="density-col" style="display:none;">Önc. Dansite (HU)</th>
+              <th class="density-col" style="display:none;">Şim. Dansite (HU)</th>
+              <th>Notlar</th><th>İşlem</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="calculate-section">
+        <div class="calculate-controls">
+          <button class="calculate-btn" onclick="calculateResults('solid')">Solid Organ Hesapla</button>
+          <button class="calculate-btn" onclick="calculateResults('lymphnode')">Lenf Nodları Hesapla</button>
+          <button class="manage-btn" onclick="openLocationManager()">⚙️ Lokasyonları Yönet</button>
+        </div>
+        <div id="results-container"></div>
+        <div id="export-controls" style="margin-top:16px; display:flex; gap:12px;">
+          <button class="export-btn" onclick="exportWord('table')">📄 Word'e Aktar (Tablo)</button>
+          <button class="export-btn" onclick="exportWord('paragraph')">📄 Word'e Aktar (Paragraf)</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#2c3e50;color:#ecf0f1;padding:20px;text-align:center;border-top:3px solid #00CED1;">
+      <p style="font-family:'Courier New', Courier, Monaco, monospace;font-size:14px;margin:0;">
+        Düzeltme ve önerileriniz için 
+        <a href="mailto:drgulbay@gmail.com?subject=RECIST%20Aracı%20Geri%20Bildirim" 
+           style="color:#00CED1;text-decoration:none;font-weight:bold;border-bottom:2px dotted #00CED1;padding-bottom:2px;">
+          drgulbay@gmail.com
+        </a> 
+        adresine yazınız
+      </p>
+    </div>
+  </div>
+
+  <datalist id="locations-solid"></datalist>
+  <datalist id="locations-lymph"></datalist>
+
+  <div id="locationModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📝 Özel Lokasyonları Yönet</h2>
+        <button class="close-btn" onclick="closeLocationManager()">&times;</button>
+      </div>
+      <ul id="locationList" class="location-list"></ul>
+      <div class="modal-footer">
+        <div class="import-export-btns">
+          <button class="modal-btn import-btn" onclick="importLocations()">📥 İçe Aktar</button>
+          <button class="modal-btn export-btn-modal" onclick="exportLocations()">📤 Dışa Aktar</button>
+          <button class="modal-btn clear-btn" onclick="clearAllLocations()">🗑️ Hepsini Temizle</button>
+        </div>
+        <button class="modal-btn close-modal-btn" onclick="closeLocationManager()">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="importFileInput" class="hidden" accept=".json" onchange="handleFileImport(event)">
+
+  <script>
+    let lesionCounters = { solid:1, lymphnode:1 };
+
+    const defaultLocations = [
+      'Karaciğer Segment 1','Karaciğer Segment 2','Karaciğer Segment 3','Karaciğer Segment 4a','Karaciğer Segment 4b','Karaciğer Segment 5','Karaciğer Segment 6','Karaciğer Segment 7','Karaciğer Segment 8',
+      'Karaciğer periferik','Karaciğer santral','Karaciğer periportal',
+      'Sürrenal bez sağ','Sürrenal bez sol',
+      'Akciğer sağ üst lob','Akciğer sağ orta lob','Akciğer sağ alt lob','Akciğer sol üst lob','Akciğer sol alt lob',
+      'Pankreas baş','Pankreas korpus','Pankreas kuyruk',
+      'Böbrek sağ üst pol','Böbrek sağ orta','Böbrek sağ alt pol','Böbrek sol üst pol','Böbrek sol orta','Böbrek sol alt pol',
+      'Dalak','Beyin frontal','Beyin parietal','Beyin temporal','Beyin oksipital',
+      'Periton','Omentum','Mezenter','Retroperiton'
+    ];
+
+    const lymphNodeLocations = [
+      'Servikal sağ','Servikal sol','Supraklaviküler sağ','Supraklaviküler sol','Aksiller sağ','Aksiller sol',
+      'Üst paratracheal', 'Alt paratrakeal (4R)', 'Alt paratrakeal (4L)', 'Prekarinal', 'Subkarinal', 'Prevasküler', 'Subaortik', 'Sağ hiler', 'Sol hiler' ,
+      'Celiac', 'Küçük kurvatur', 'Peripilorik', 'Gastroepiploik', 'Hepatoduodenal', 'Hepatoduodenal (12a)', 'Hepatoduodenal (12b)', 'Hepatoduodenal (12p)', 
+      'Portal', 'Periportal', 'Paraaortik','Parakardiak','Retroperitoneal','Mezenterik','İliak sağ','İliak sol','İnguinal sağ','İnguinal sol'
+    ];
+
+    function getCustomLocations(){
+      const stored = localStorage.getItem('recist_custom_locations');
+      return stored ? JSON.parse(stored) : [];
+    }
+    function saveCustomLocations(locs){
+      localStorage.setItem('recist_custom_locations', JSON.stringify(locs));
+      populateDatalists();
+    }
+    function getAllLocations(type){
+      const custom = getCustomLocations();
+      const base = type === 'lymphnode' ? lymphNodeLocations : defaultLocations;
+      return [...new Set([...base, ...custom])];
+    }
+
+    function populateDatalists(){
+      const solidDL = document.getElementById('locations-solid');
+      const lymphDL = document.getElementById('locations-lymph');
+      solidDL.innerHTML = '';
+      lymphDL.innerHTML = '';
+      getAllLocations('solid').forEach(loc=>{
+        const opt = document.createElement('option'); opt.value = loc; solidDL.appendChild(opt);
+      });
+      getAllLocations('lymphnode').forEach(loc=>{
+        const opt = document.createElement('option'); opt.value = loc; lymphDL.appendChild(opt);
+      });
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.lesion-content').forEach(c=>c.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById(this.dataset.type+'-content').classList.add('active');
+      });
+    });
+
+    function updateMethodInfo(){
+      const method = document.getElementById('assessmentMethod').value;
+      const infoBox = document.getElementById('methodInfoBox');
+      const irecistControls = document.getElementById('irecistControls');
+      const irecistBaselineCols = document.querySelectorAll('.irecist-baseline-col');
+      const irecistFirstcontrolCols = document.querySelectorAll('.irecist-firstcontrol-col');
+      const irecistConfirmationCols = document.querySelectorAll('.irecist-confirmation-col');
+      const standardPrevCols = document.querySelectorAll('.standard-prev-col');
+      const standardCurrCols = document.querySelectorAll('.standard-curr-col');
+      const densityCols = document.querySelectorAll('.density-col');
+      const enhancementCols = document.querySelectorAll('.enhancement-col');
+
+      irecistBaselineCols.forEach(col => col.style.display = 'none');
+      irecistFirstcontrolCols.forEach(col => col.style.display = 'none');
+      irecistConfirmationCols.forEach(col => col.style.display = 'none');
+      standardPrevCols.forEach(col => col.style.display = 'none');
+      standardCurrCols.forEach(col => col.style.display = 'none');
+      densityCols.forEach(col => col.style.display = 'none');
+      enhancementCols.forEach(col => col.style.display = 'none');
+      irecistControls.style.display = 'none';
+
+      if(method === 'recist'){
+        standardPrevCols.forEach(col => col.style.display = 'table-cell');
+        standardCurrCols.forEach(col => col.style.display = 'table-cell');
+        infoBox.innerHTML = `
+          <h4>📚 RECIST 1.1 Kriterleri</h4>
+          <ul>
+            <li><strong>Target Lezyonlar:</strong> Ölçülebilir lezyonlar
+              <ul style="margin-left:20px;">
+                <li>Solid organ lezyonları: En uzun çap ≥10 mm</li>
+                <li>Lenf nodları: Kısa aks ≥15 mm</li>
+                <li>Maksimum 5 lezyon (her organdan maks. 2)</li>
+              </ul>
+            </li>
+            <li><strong>Yanıt Kriterleri:</strong>
+              <ul style="margin-left:20px;">
+                <li><strong>CR:</strong> Tüm lezyonların kaybolması</li>
+                <li><strong>PR:</strong> ≥30% küçülme VE ≥5 mm mutlak azalma</li>
+                <li><strong>PD:</strong> ≥20% büyüme VE ≥5 mm mutlak artış veya yeni lezyon</li>
+                <li><strong>SD:</strong> PR veya PD olmayan</li>
+              </ul>
+            </li>
+          </ul>
+        `;
+      }else if(method === 'mrecist'){
+        standardPrevCols.forEach(col => col.style.display = 'table-cell');
+        standardCurrCols.forEach(col => col.style.display = 'table-cell');
+        enhancementCols.forEach(col => col.style.display = 'table-cell');
+        infoBox.innerHTML = `
+          <h4>📚 mRECIST (Modified RECIST for HCC)</h4>
+          <ul>
+            <li><strong>Ölçüm Prensibi:</strong> Sadece canlı tümör (arteriyel fazda enhancement gösteren) bölümler ölçülür</li>
+            <li><strong>Yanıt Kriterleri (canlı tümör için):</strong>
+              <ul style="margin-left:20px;">
+                <li><strong>CR:</strong> Arteriyel fazda enhancement kaybolması</li>
+                <li><strong>PR:</strong> Enhancement gösteren çapın ≥30% + ≥5mm azalması</li>
+                <li><strong>PD:</strong> Enhancement gösteren çapın ≥20% + ≥5mm artışı veya yeni lezyon</li>
+                <li><strong>SD:</strong> PR veya PD olmayan</li>
+              </ul>
+            </li>
+          </ul>
+        `;
+      }else if(method === 'irecist'){
+        irecistControls.style.display = 'block';
+        irecistBaselineCols.forEach(col => col.style.display = 'table-cell');
+        infoBox.innerHTML = `
+          <h4>📚 iRECIST (Immune RECIST) - Düzeltilmiş Versiyon</h4>
+          <ul>
+            <li><strong>İki Aşamalı Değerlendirme:</strong>
+              <ul style="margin-left:20px;">
+                <li><strong>1. iUPD Doğrulama Kıyası:</strong> iUPD → Doğrulama karşılaştırması
+                  <ul style="margin-left:20px;">
+                    <li>iCPD kriteri: ≥10% VE ≥5mm ek artış</li>
+                  </ul>
+                </li>
+                <li><strong>2. Klinik Referans Kıyası:</strong> Baseline → Doğrulama karşılaştırması
+                  <ul style="margin-left:20px;">
+                    <li>iCPD kriteri: ≥20% VE ≥5mm büyüme</li>
+                    <li>iPR kriteri: ≥30% VE ≥5mm küçülme</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li><strong>iUPD (1. kontrolde):</strong> Baseline'a göre ≥20% + ≥5mm büyüme
+              <ul style="margin-left:20px;">
+                <li>⚠️ Tedavi KESİLMEZ, 4-8 hafta sonra doğrulama gerekir</li>
+              </ul>
+            </li>
+            <li><strong>iCPD (Doğrulama kontrolünde):</strong>
+              <ul style="margin-left:20px;">
+                <li>iUPD'ye göre ≥10% + ≥5mm ek artış VEYA</li>
+                <li>Baseline'a göre hala ≥20% + ≥5mm büyüme</li>
+              </ul>
+            </li>
+            <li><strong>Psödoprogresyon:</strong> iCPD kriterleri karşılanmazsa, baseline'a dönülüp yeniden sınıflanır (iPR/iSD/yeni iUPD)</li>
+          </ul>
+        `;
+        handleIRECISTEvalChange();
+      }else if(method === 'choi'){
+        standardPrevCols.forEach(col => col.style.display = 'table-cell');
+        standardCurrCols.forEach(col => col.style.display = 'table-cell');
+        densityCols.forEach(col => col.style.display = 'table-cell');
+        infoBox.innerHTML = `
+          <h4>📚 Choi Kriterleri (GIST)</h4>
+          <ul>
+            <li><strong>Yanıt Kriterleri:</strong>
+              <ul style="margin-left:20px;">
+                <li><strong>PR:</strong> Boyutta ≥10% azalma VEYA dansite ≥15% azalma</li>
+                <li><strong>PD:</strong> Boyutta ≥10% artış VE Choi PR kriterlerini karşılamama, VEYA yeni lezyon</li>
+                <li><strong>SD:</strong> PR veya PD olmayan</li>
+              </ul>
+            </li>
+          </ul>
+        `;
+      }
+    }
+
+    function handleIRECISTEvalChange(){
+      const evalType = document.querySelector('input[name="irecistEval"]:checked')?.value;
+      const firstcontrolCols = document.querySelectorAll('.irecist-firstcontrol-col');
+      const confirmationCols = document.querySelectorAll('.irecist-confirmation-col');
+      
+      if(evalType === 'first_control'){
+        firstcontrolCols.forEach(col => col.style.display = 'table-cell');
+        confirmationCols.forEach(col => col.style.display = 'none');
+      }else if(evalType === 'confirm_iupd'){
+        firstcontrolCols.forEach(col => col.style.display = 'table-cell');
+        confirmationCols.forEach(col => col.style.display = 'table-cell');
+      }
+    }
+
+    function addLesion(type){
+      const tbody = document.getElementById(type+'-table').querySelector('tbody');
+      if(tbody.querySelectorAll('tr').length >= 5){
+        alert('RECIST 1.1: Maksimum 5 hedef lezyon eklenebilir.'); 
+        return;
+      }
+      
+      const num = lesionCounters[type]++;
+      const method = document.getElementById('assessmentMethod').value;
+      const isChoi = method === 'choi';
+      const isMRECIST = method === 'mrecist';
+      const isIRECIST = method === 'irecist';
+      
+      const row = tbody.insertRow();
+
+      if(type==='solid'){
+        let html = '<td>L'+num+'</td>'+
+          '<td><select class="type-sel"><option value="">Seçiniz</option><option value="Primer">Primer</option><option value="Metastaz">Metastaz</option></select></td>'+
+          '<td><input list="locations-solid" type="text" placeholder="Konum yazınız..." onblur="saveNewLocation(this)"></td>';
+        
+        if(isIRECIST){
+          const evalType = document.querySelector('input[name="irecistEval"]:checked')?.value;
+          html += '<td class="irecist-baseline-col"><input type="number" step="0.01" min="0" placeholder="Baseline"></td>';
+          html += '<td class="irecist-firstcontrol-col" style="display:'+(evalType?'table-cell':'none')+'"><input type="number" step="0.01" min="0" placeholder="1. Kontrol"></td>';
+          html += '<td class="irecist-confirmation-col" style="display:'+(evalType==='confirm_iupd'?'table-cell':'none')+'"><input type="number" step="0.01" min="0" placeholder="iUPD Doğrulama"></td>';
+          html += '<td class="standard-prev-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="standard-curr-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+        }else{
+          html += '<td class="irecist-baseline-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="irecist-firstcontrol-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="irecist-confirmation-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="standard-prev-col"><input type="number" step="0.01" min="0" placeholder="Önceki"></td>';
+          html += '<td class="standard-curr-col"><input type="number" step="0.01" min="0" placeholder="Şimdiki"></td>';
+        }
+        
+        if(isChoi){
+          html += '<td class="density-col"><input type="number" step="0.01" placeholder="HU"></td>'+
+                  '<td class="density-col"><input type="number" step="0.01" placeholder="HU"></td>';
+        }else{
+          html += '<td class="density-col" style="display:none;"><input type="number" step="0.01"></td>'+
+                  '<td class="density-col" style="display:none;"><input type="number" step="0.01"></td>';
+        }
+        
+        if(isMRECIST){
+          html += '<td class="enhancement-col"><input type="number" step="0.01" min="0" placeholder="Arteriyel faz"></td>'+
+                  '<td class="enhancement-col"><input type="number" step="0.01" min="0" placeholder="Arteriyel faz"></td>';
+        }else{
+          html += '<td class="enhancement-col" style="display:none;"><input type="number" step="0.01"></td>'+
+                  '<td class="enhancement-col" style="display:none;"><input type="number" step="0.01"></td>';
+        }
+        
+        html += '<td><input type="text" placeholder="Notlar"></td><td><button class="remove-btn" onclick="removeLesion(this)">Sil</button></td>';
+        row.innerHTML = html;
+      }else{
+        let html = '<td>LN'+num+'</td>'+
+          '<td><input list="locations-lymph" type="text" placeholder="Konum yazınız..." onblur="saveNewLocation(this)"></td>';
+        
+        if(isIRECIST){
+          const evalType = document.querySelector('input[name="irecistEval"]:checked')?.value;
+          html += '<td class="irecist-baseline-col"><input type="number" step="0.01" min="0" placeholder="Baseline"></td>';
+          html += '<td class="irecist-firstcontrol-col" style="display:'+(evalType?'table-cell':'none')+'"><input type="number" step="0.01" min="0" placeholder="1. Kontrol"></td>';
+          html += '<td class="irecist-confirmation-col" style="display:'+(evalType==='confirm_iupd'?'table-cell':'none')+'"><input type="number" step="0.01" min="0" placeholder="iUPD Doğrulama"></td>';
+          html += '<td class="standard-prev-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="standard-curr-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+        }else{
+          html += '<td class="irecist-baseline-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="irecist-firstcontrol-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="irecist-confirmation-col" style="display:none;"><input type="number" step="0.01" min="0"></td>';
+          html += '<td class="standard-prev-col"><input type="number" step="0.01" min="0" placeholder="Önceki"></td>';
+          html += '<td class="standard-curr-col"><input type="number" step="0.01" min="0" placeholder="Şimdiki"></td>';
+        }
+        
+        if(isChoi){
+          html += '<td class="density-col"><input type="number" step="0.01" placeholder="HU"></td>'+
+                  '<td class="density-col"><input type="number" step="0.01" placeholder="HU"></td>';
+        }else{
+          html += '<td class="density-col" style="display:none;"><input type="number" step="0.01"></td>'+
+                  '<td class="density-col" style="display:none;"><input type="number" step="0.01"></td>';
+        }
+        
+        html += '<td><input type="text" placeholder="Notlar"></td><td><button class="remove-btn" onclick="removeLesion(this)">Sil</button></td>';
+        row.innerHTML = html;
+      }
+    }
+
+    function saveNewLocation(input){
+      const value = input.value.trim();
+      if(!value) return;
+      const all = [...defaultLocations, ...lymphNodeLocations];
+      if(all.includes(value)) return;
+      const custom = getCustomLocations();
+      if(!custom.includes(value)){
+        custom.push(value);
+        saveCustomLocations(custom);
+      }
+    }
+
+    function removeLesion(btn){
+      btn.closest('tr').remove();
+    }
+
+    function calculateResults(type, overrideFormat = null, returnHtml = false){
+      const tbody = document.getElementById(type + '-table').querySelector('tbody');
+      const rows = tbody.querySelectorAll('tr');
+      if (rows.length === 0) { 
+        alert('Lütfen lezyon ekleyin.'); 
+        return returnHtml ? '' : undefined; 
+      }
+
+      const method = document.getElementById('assessmentMethod').value;
+      const isIRECIST = method === 'irecist';
+      const isChoi = method === 'choi';
+      const isMRECIST = method === 'mrecist';
+      const isSolid = type === 'solid';
+
+      let irecistEval = '';
+      if(isIRECIST){
+        irecistEval = document.querySelector('input[name="irecistEval"]:checked')?.value || 'first_control';
+      }
+
+      let lesions = [], totalBaseline = 0, totalFirstControl = 0, totalConfirmation = 0;
+      let totalPrev = 0, totalCurr = 0;
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const id = cells[0].textContent;
+        let lesType = '', loc = '', baseline = 0, firstControl = 0, confirmation = 0;
+        let prev = 0, curr = 0, notes = '';
+        let prevDensity = 0, currDensity = 0;
+        let prevEnhance = 0, currEnhance = 0;
+        let cellIdx = 1;
+
+        if (isSolid) {
+          lesType = cells[cellIdx++].querySelector('select').value;
+          loc = cells[cellIdx++].querySelector('input').value;
+        } else {
+          loc = cells[cellIdx++].querySelector('input').value;
+        }
+
+        if(isIRECIST){
+          baseline = parseFloat(cells[cellIdx].querySelector('input').value) || 0;
+          firstControl = parseFloat(cells[cellIdx+1].querySelector('input').value) || 0;
+          if(irecistEval === 'confirm_iupd'){
+            confirmation = parseFloat(cells[cellIdx+2].querySelector('input').value) || 0;
+          }
+        }
+        cellIdx += 3;
+        
+        if(!isIRECIST){
+          prev = parseFloat(cells[cellIdx].querySelector('input').value) || 0;
+          curr = parseFloat(cells[cellIdx+1].querySelector('input').value) || 0;
+        }
+        cellIdx += 2;
+        
+        if (isChoi) {
+          prevDensity = parseFloat(cells[cellIdx].querySelector('input').value) || 0;
+          currDensity = parseFloat(cells[cellIdx+1].querySelector('input').value) || 0;
+        }
+        cellIdx += 2;
+        
+        if(isSolid){
+          if(isMRECIST){
+            prevEnhance = parseFloat(cells[cellIdx].querySelector('input').value) || 0;
+            currEnhance = parseFloat(cells[cellIdx+1].querySelector('input').value) || 0;
+          }
+          cellIdx += 2;
+        }
+        
+        notes = cells[cellIdx].querySelector('input').value;
+
+        if (!loc) return;
+
+        if(isMRECIST && prevEnhance > 0 && currEnhance > 0){
+          prev = prevEnhance;
+          curr = currEnhance;
+        }
+
+        if(isIRECIST){
+          if(baseline === 0 || firstControl === 0) return;
+          if(irecistEval === 'confirm_iupd' && confirmation === 0) return;
+          
+          totalBaseline += baseline;
+          totalFirstControl += firstControl;
+          if(irecistEval === 'confirm_iupd'){
+            totalConfirmation += confirmation;
+          }
+          
+          lesions.push({
+            id, type: lesType, loc,
+            baseline: baseline.toFixed(2),
+            firstControl: firstControl.toFixed(2),
+            confirmation: irecistEval === 'confirm_iupd' ? confirmation.toFixed(2) : null,
+            notes
+          });
+        }else{
+          if(prev === 0 || curr === 0) return;
+          
+          totalPrev += prev;
+          totalCurr += curr;
+          
+          const change = ((curr - prev) / prev * 100).toFixed(2);
+          let densityChange = null;
+          if (isChoi && prevDensity > 0 && currDensity > 0) {
+            densityChange = ((currDensity - prevDensity) / prevDensity * 100).toFixed(2);
+          }
+
+          lesions.push({
+            id, type: lesType, loc,
+            prev: prev.toFixed(2),
+            curr: curr.toFixed(2),
+            change,
+            prevDensity: prevDensity > 0 ? prevDensity.toFixed(2) : null,
+            currDensity: currDensity > 0 ? currDensity.toFixed(2) : null,
+            densityChange,
+            notes
+          });
+        }
+      });
+
+      if (lesions.length === 0) { 
+        alert('Geçerli veri yok.'); 
+        return returnHtml ? '' : undefined; 
+      }
+
+      let response = 'SD', respText = 'Stabil Hastalık (Stable Disease)', respClass = 'sd';
+      let explanation = '';
+
+      if(isIRECIST){
+        if(irecistEval === 'first_control'){
+          const changePercent = ((totalFirstControl - totalBaseline) / totalBaseline * 100).toFixed(2);
+          const changeAbsolute = totalFirstControl - totalBaseline;
+          
+          if(parseFloat(changePercent) >= 20 && changeAbsolute >= 5){
+            response = 'iUPD';
+            respText = 'iUPD (immune Unconfirmed Progressive Disease)';
+            respClass = 'pd';
+            explanation = `<strong>⚠️ iUPD Tespit Edildi</strong><br><br>
+              • Baseline toplam: ${totalBaseline.toFixed(2)} mm<br>
+              • 1. Kontrol toplam: ${totalFirstControl.toFixed(2)} mm<br>
+              • Değişim: +${changePercent}% VE +${changeAbsolute.toFixed(2)} mm<br>
+              • Her iki kriter de karşılandı (≥20% VE ≥5mm) ✓<br><br>
+              <strong>Yönetim:</strong><br>
+              • Tedavi KESİLMEZ<br>
+              • 4-8 hafta sonra tekrar görüntüleme önerilir<br>
+              • Yeni lezyonlar varsa onlar da ölçülüp eklenmelidir<br>
+              • Psödoprogresyon olasılığı nedeniyle doğrulama gereklidir`;
+          }else if(parseFloat(changePercent) <= -30 && Math.abs(changeAbsolute) >= 5){
+            response = 'iPR';
+            respText = 'iPR (immune Partial Response)';
+            respClass = 'pr';
+            explanation = `<strong>Parsiyel Yanıt</strong><br><br>
+              • Baseline toplam: ${totalBaseline.toFixed(2)} mm<br>
+              • 1. Kontrol toplam: ${totalFirstControl.toFixed(2)} mm<br>
+              • Değişim: ${changePercent}% VE ${changeAbsolute.toFixed(2)} mm<br>
+              • Her iki kriter de karşılandı (≥30% VE ≥5mm) ✓<br><br>
+              Tedavi etkili, devam edilmelidir.`;
+          }else{
+            response = 'iSD';
+            respText = 'iSD (immune Stable Disease)';
+            respClass = 'sd';
+            explanation = `<strong>Stabil Hastalık</strong><br><br>
+              • Baseline toplam: ${totalBaseline.toFixed(2)} mm<br>
+              • 1. Kontrol toplam: ${totalFirstControl.toFixed(2)} mm<br>
+              • Değişim: ${changePercent}% / ${changeAbsolute.toFixed(2)} mm<br><br>
+              Tedaviye devam edilmelidir.`;
+          }
+        }else if(irecistEval === 'confirm_iupd'){
+          const changeFromBaselinePercent = ((totalConfirmation - totalBaseline) / totalBaseline * 100).toFixed(2);
+          const changeFromBaselineAbsolute = totalConfirmation - totalBaseline;
+          const changeFromFirstPercent = ((totalConfirmation - totalFirstControl) / totalFirstControl * 100).toFixed(2);
+          const changeFromFirstAbsolute = totalConfirmation - totalFirstControl;
+          
+          const isPDFromBaseline = (parseFloat(changeFromBaselinePercent) >= 20 && changeFromBaselineAbsolute >= 5);
+          const isAdditionalIncrease = (parseFloat(changeFromFirstPercent) >= 10 && changeFromFirstAbsolute >= 5);
+          
+          if(isPDFromBaseline || isAdditionalIncrease){
+            response = 'iCPD';
+            respText = 'iCPD (immune Confirmed Progressive Disease)';
+            respClass = 'pd';
+            
+            let criteriaText = '';
+            if(isPDFromBaseline && isAdditionalIncrease){
+              criteriaText = '<strong>✓ Her iki kriter de pozitif - Kesin iCPD</strong><br>';
+            } else if(isPDFromBaseline){
+              criteriaText = '<strong>✓ Baseline kriteri pozitif - iCPD</strong><br>';
+            } else {
+              criteriaText = '<strong>✓ iUPD doğrulama kriteri pozitif - iCPD</strong><br>';
+            }
+            
+            explanation = `<strong>🔴 Progresyon Doğrulandı</strong><br><br>
+              ${criteriaText}<br>
+              <strong>1) iUPD Doğrulama Kıyası:</strong><br>
+              • iUPD → Doğrulama: ${totalFirstControl.toFixed(2)} → ${totalConfirmation.toFixed(2)} mm<br>
+              • Değişim: ${changeFromFirstPercent}% / ${changeFromFirstAbsolute.toFixed(2)} mm<br>
+              • iCPD kriteri (≥%10 VE ≥5mm): ${isAdditionalIncrease ? '✓ Pozitif' : '✗ Negatif'}<br><br>
+              
+              <strong>2) Klinik Referans Kıyası (Baseline):</strong><br>
+              • Baseline → Doğrulama: ${totalBaseline.toFixed(2)} → ${totalConfirmation.toFixed(2)} mm<br>
+              • Değişim: ${changeFromBaselinePercent}% / ${changeFromBaselineAbsolute.toFixed(2)} mm<br>
+              • iCPD kriteri (≥%20 VE ≥5mm): ${isPDFromBaseline ? '✓ Pozitif' : '✗ Negatif'}<br><br>
+              
+              <strong>SONUÇ:</strong> Gerçek progresyon doğrulandı. Tedavi değişikliği düşünülmelidir.`;
+              
+          } else {
+            // Psödoprogresyon - baseline'a dön ve yeniden sınıfla
+            if(parseFloat(changeFromBaselinePercent) <= -30 && Math.abs(changeFromBaselineAbsolute) >= 5){
+              response = 'iPR';
+              respText = 'iPR (immune Partial Response)';
+              respClass = 'pr';
+              explanation = `<strong>✅ Psödoprogresyon Sonrası Yanıt!</strong><br><br>
+                <strong>1) iUPD Doğrulama Kıyası:</strong><br>
+                • iUPD → Doğrulama: ${changeFromFirstPercent}% / ${changeFromFirstAbsolute.toFixed(2)} mm<br>
+                • iCPD değil (≥%10 VE ≥5mm yok) ✗<br><br>
+                
+                <strong>2) Klinik Referans Kıyası (Baseline):</strong><br>
+                • Baseline → Doğrulama: ${changeFromBaselinePercent}% / ${changeFromBaselineAbsolute.toFixed(2)} mm<br>
+                • Baseline'a göre ≥30% VE ≥5mm küçülme → iPR ✓<br><br>
+                
+                <strong>SONUÇ:</strong> İlk kontroldeki büyüme psödoprogresyondu! Tedavi etkili.`;
+                
+            } else if(parseFloat(changeFromBaselinePercent) >= 20 && changeFromBaselineAbsolute >= 5){
+              response = 'iUPD';
+              respText = 'iUPD (Yeni - Tekrar Doğrulama Gerekli)';
+              respClass = 'pd';
+              explanation = `<strong>⚠️ Yeni iUPD Tespit Edildi</strong><br><br>
+                <strong>1) iUPD Doğrulama Kıyası:</strong><br>
+                • iUPD → Doğrulama: ${changeFromFirstPercent}%<br>
+                • iCPD değil (ek artış yok)<br><br>
+                
+                <strong>2) Klinik Referans Kıyası (Baseline):</strong><br>
+                • Baseline → Doğrulama: ${changeFromBaselinePercent}% / ${changeFromBaselineAbsolute.toFixed(2)} mm<br>
+                • Yine ≥20% VE ≥5mm artış var → Yeni iUPD<br><br>
+                
+                <strong>SONUÇ:</strong> İlk iUPD doğrulanmadı, ancak yeni iUPD tespit edildi. Tekrar doğrulama gerekebilir.`;
+                
+            } else {
+              response = 'iSD';
+              respText = 'iSD (immune Stable Disease)';
+              respClass = 'sd';
+              explanation = `<strong>Psödoprogresyon Değerlendirmesi</strong><br><br>
+                <strong>1) iUPD Doğrulama Kıyası:</strong><br>
+                • iUPD → Doğrulama: ${changeFromFirstPercent}% / ${changeFromFirstAbsolute.toFixed(2)} mm<br>
+                • iCPD değil (≥%10 VE ≥5mm ek artış yok) ✗<br><br>
+                
+                <strong>2) Klinik Referans Kıyası (Baseline):</strong><br>
+                • Baseline → Doğrulama: ${changeFromBaselinePercent}% / ${changeFromBaselineAbsolute.toFixed(2)} mm<br>
+                • ≥20% VE ≥5mm büyüme yok → Psödoprogresyon ✓<br><br>
+                
+                <strong>SONUÇ:</strong> İlk kontroldeki büyüme psödoprogresyondu. Tedaviye devam.`;
+            }
+          }
+        }
+      }else if(isChoi){
+        const overallChange = totalPrev > 0 ? ((totalCurr - totalPrev) / totalPrev * 100).toFixed(2) : '0.00';
+        let avgDensityChange = 0, densityCount = 0;
+        
+        lesions.forEach(l => {
+          if (l.densityChange !== null) {
+            avgDensityChange += parseFloat(l.densityChange);
+            densityCount++;
+          }
+        });
+        
+        if (densityCount > 0) {
+          avgDensityChange = (avgDensityChange / densityCount).toFixed(2);
+        }
+
+        const hasSignificantSizeDecrease = parseFloat(overallChange) <= -10;
+        const hasSignificantDensityDecrease = densityCount > 0 && parseFloat(avgDensityChange) <= -15;
+        const hasSignificantSizeIncrease = parseFloat(overallChange) >= 10;
+
+        if (hasSignificantSizeDecrease || hasSignificantDensityDecrease) {
+          response = 'PR';
+          respText = 'Parsiyel Yanıt (Partial Response)';
+          respClass = 'pr';
+          explanation = 'Boyut değişimi: '+overallChange+'%<br>Dansite değişimi: '+avgDensityChange+'%';
+        } else if (!hasSignificantSizeDecrease && !hasSignificantDensityDecrease && hasSignificantSizeIncrease) {
+          response = 'PD';
+          respText = 'Progresif Hastalık (Progressive Disease)';
+          respClass = 'pd';
+          explanation = 'Boyut değişimi: '+overallChange+'%<br>Dansite değişimi: '+avgDensityChange+'%';
+        }else{
+          explanation = 'Boyut değişimi: '+overallChange+'%<br>Dansite değişimi: '+avgDensityChange+'%';
+        }
+      }else{
+        const overallChangePercent = totalPrev > 0 ? ((totalCurr - totalPrev) / totalPrev * 100).toFixed(2) : '0.00';
+        const overallChangeAbsolute = totalCurr - totalPrev;
+        
+        if (parseFloat(overallChangePercent) <= -30 && Math.abs(overallChangeAbsolute) >= 5) {
+          response = 'PR';
+          respText = 'Parsiyel Yanıt (Partial Response)';
+          respClass = 'pr';
+        } else if (parseFloat(overallChangePercent) >= 20 && overallChangeAbsolute >= 5) {
+          response = 'PD';
+          respText = 'Progresif Hastalık (Progressive Disease)';
+          respClass = 'pd';
+        }
+        
+        if(isMRECIST){
+          explanation = 'mRECIST: Arteriyel fazda enhancement gösteren canlı tümör bölümü ölçüldü.';
+        }
+      }
+
+      const html = showResults(
+        lesions, totalBaseline, totalFirstControl, totalConfirmation, totalPrev.toFixed(2), totalCurr.toFixed(2),
+        respText, respClass, type, isIRECIST, irecistEval, isChoi, isMRECIST, explanation,
+        returnHtml
+      );
+
+      if (returnHtml) return html;
+    }
+
+    function showResults(
+      lesions, totBaseline, totFirstControl, totConfirmation, totPrev, totCurr, respText, respClass, type,
+      isIRECIST, irecistEval, isChoi, isMRECIST, explanation, returnOnly = false
+    ){
+      const typeName = type === 'solid' ? 'Solid Organ Lezyonları' : 'Lenf Nodları';
+      
+      let html = '<div class="results"><h3>📊 ' + typeName + ' Sonuçları</h3>';
+
+      html += '<table class="result-table"><thead><tr><th>Lezyon</th>';
+      if(type==='solid') html+='<th>Tip</th>';
+      html += '<th>Konum</th>';
+      
+      if(isIRECIST){
+        html += '<th>Baseline</th><th>1. Kontrol</th>';
+        if(irecistEval === 'confirm_iupd') html += '<th>iUPD Doğrulama</th>';
+      }else{
+        html += '<th>Önceki</th><th>Şimdiki</th><th>Değişim</th>';
+        if(isChoi){ html+='<th>Önc. Dans.</th><th>Şim. Dans.</th><th>Dans. Değ.</th>'; }
+      }
+      
+      html += '<th>Notlar</th></tr></thead><tbody>';
+
+      lesions.forEach(l=>{
+        html += '<tr><td>'+l.id+'</td>';
+        if(type==='solid') html += '<td>'+(l.type||'-')+'</td>';
+        html += '<td>'+l.loc+'</td>';
+        
+        if(isIRECIST){
+          html += '<td>'+l.baseline+' mm</td><td>'+l.firstControl+' mm</td>';
+          if(irecistEval === 'confirm_iupd') html += '<td>'+l.confirmation+' mm</td>';
+        }else{
+          html += '<td>'+l.prev+' mm</td><td>'+l.curr+' mm</td><td>'+l.change+'%</td>';
+          if(isChoi){
+            html += '<td>'+(l.prevDensity||'-')+' HU</td><td>'+(l.currDensity||'-')+' HU</td><td>'+(l.densityChange?l.densityChange+'%':'-')+'</td>';
+          }
+        }
+        
+        html += '<td>'+(l.notes||'-')+'</td></tr>';
+      });
+
+      if(isIRECIST){
+        const colspanBase = (type==='solid') ? 3 : 2;
+        const extraCols = (irecistEval === 'confirm_iupd') ? 3 : 2;
+        html += '</tbody><tfoot><tr><td colspan="'+colspanBase+'"><strong>TOPLAM</strong></td>';
+        html += '<td><strong>'+totBaseline.toFixed(2)+' mm</strong></td>';
+        html += '<td><strong>'+totFirstControl.toFixed(2)+' mm</strong></td>';
+        if(irecistEval === 'confirm_iupd'){
+          html += '<td><strong>'+totConfirmation.toFixed(2)+' mm</strong></td>';
+        }
+        html += '<td></td></tr></tfoot></table>';
+      }else{
+        const overallChange = parseFloat(totPrev) > 0 ? ((parseFloat(totCurr) - parseFloat(totPrev)) / parseFloat(totPrev) * 100).toFixed(2) : '0.00';
+        const colspanBase = (type==='solid') ? 3 : 2;
+        const colspanChoi = isChoi ? 3 : 1;
+        
+        html += '</tbody><tfoot><tr><td colspan="'+colspanBase+'"><strong>TOPLAM</strong></td>';
+        html += '<td><strong>'+totPrev+' mm</strong></td><td><strong>'+totCurr+' mm</strong></td>';
+        html += '<td colspan="'+colspanChoi+'"><strong>'+overallChange+'%</strong></td></tr></tfoot></table>';
+      }
+
+      html += '<div class="response-badge '+respClass+'" style="margin-top:20px;">YANIT: '+respText+'</div>';
+      
+      if(explanation){
+        html += '<div style="background:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin-top:15px;border-radius:8px;">'+
+                '<strong>📝 Değerlendirme:</strong><br><br>'+explanation+'</div>';
+      }
+
+      html += '</div>';
+
+      if (returnOnly) return html;
+      const container=document.getElementById('results-container');
+      container.innerHTML += html;
+    }
+
+    function exportWord(format){
+      const type = document.querySelector('.tab-btn.active')?.dataset.type || 'solid';
+      const htmlContent = calculateResults(type, format, true);
+      if (!htmlContent) return;
+
+      const method = document.getElementById('assessmentMethod').value;
+      let methodName = 'RECIST 1.1';
+      if(method === 'mrecist') methodName = 'mRECIST (HCC)';
+      else if(method === 'irecist') methodName = 'iRECIST (İmmünoterapi)';
+      else if(method === 'choi') methodName = 'Choi Kriterleri (GIST)';
+
+      const docHtml =
+        '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+        'xmlns:w="urn:schemas-microsoft-com:office:word" ' +
+        'xmlns="http://www.w3.org/TR/REC-html40">' +
+        '<head><meta charset="utf-8"><title>'+methodName+' Çıktı</title>' +
+        '<style>body{font-family:Segoe UI,Arial,sans-serif;margin:2cm} table{border-collapse:collapse;width:100%;margin:15px 0} ' +
+        'th,td{border:1px solid #999;padding:8px;text-align:left} th{background:#f0f0f0;font-weight:600} ' +
+        '.response-badge{display:inline-block;padding:8px 16px;border-radius:20px;font-weight:600;margin:15px 0;font-size:1.1em} ' +
+        'h2{color:#333;margin-top:20px} h3{color:#555;margin-top:15px}</style>' +
+        '</head><body>' +
+        '<h2>'+methodName+' Sonuç Özeti</h2>' +
+        '<p><em>Tarih: ' + new Date().toLocaleString('tr-TR') + '</em></p>' +
+        htmlContent +
+        '</body></html>';
+
+      const blob = new Blob(['\ufeff', docHtml], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${method}_${type}_${new Date().toISOString().slice(0,10)}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function openLocationManager(){
+      const modal=document.getElementById('locationModal');
+      const list=document.getElementById('locationList');
+      const custom=getCustomLocations();
+      list.innerHTML='';
+      if(custom.length===0){
+        list.innerHTML='<li style="text-align:center;padding:20px;color:#999;">Henüz özel lokasyon eklenmemiş</li>';
+      }else{
+        custom.forEach((loc,idx)=>{
+          const li=document.createElement('li');
+          li.className='location-item';
+          li.innerHTML =
+            '<span class="location-text" id="loc-text-'+idx+'">'+loc+'</span>'+
+            '<input type="text" class="location-edit-input" id="loc-edit-'+idx+'" value="'+loc+'">'+
+            '<div class="location-actions" id="loc-actions-'+idx+'">'+
+              '<button class="edit-btn" onclick="editLocation('+idx+')">✏️ Düzenle</button>'+
+              '<button class="delete-btn" onclick="deleteLocation('+idx+')">🗑️ Sil</button>'+
+            '</div>'+
+            '<div class="location-actions hidden" id="loc-save-'+idx+'">'+
+              '<button class="save-btn" onclick="saveLocation('+idx+')">💾 Kaydet</button>'+
+              '<button class="cancel-btn" onclick="cancelEdit('+idx+')">❌ İptal</button>'+
+            '</div>';
+          list.appendChild(li);
+        });
+      }
+      modal.classList.add('active');
+    }
+    function closeLocationManager(){ document.getElementById('locationModal').classList.remove('active'); }
+    function editLocation(idx){
+      document.getElementById('loc-text-'+idx).style.display='none';
+      document.getElementById('loc-edit-'+idx).classList.add('active');
+      document.getElementById('loc-actions-'+idx).style.display='none';
+      document.getElementById('loc-save-'+idx).classList.remove('hidden');
+    }
+    function cancelEdit(idx){
+      const custom=getCustomLocations();
+      document.getElementById('loc-text-'+idx).style.display='inline';
+      document.getElementById('loc-edit-'+idx).classList.remove('active');
+      document.getElementById('loc-edit-'+idx).value=custom[idx];
+      document.getElementById('loc-actions-'+idx).style.display='flex';
+      document.getElementById('loc-save-'+idx).classList.add('hidden');
+    }
+    function saveLocation(idx){
+      const val=document.getElementById('loc-edit-'+idx).value.trim();
+      if(!val){ alert('Lokasyon boş olamaz!'); return; }
+      const custom=getCustomLocations(); custom[idx]=val; saveCustomLocations(custom);
+      document.getElementById('loc-text-'+idx).textContent=val;
+      document.getElementById('loc-text-'+idx).style.display='inline';
+      document.getElementById('loc-edit-'+idx).classList.remove('active');
+      document.getElementById('loc-actions-'+idx).style.display='flex';
+      document.getElementById('loc-save-'+idx).classList.add('hidden');
+    }
+    function deleteLocation(idx){
+      if(!confirm('Bu lokasyonu silmek istediğinizden emin misiniz?')) return;
+      const custom=getCustomLocations(); custom.splice(idx,1); saveCustomLocations(custom); openLocationManager();
+    }
+    function exportLocations(){
+      const custom=getCustomLocations();
+      if(custom.length===0){ alert('Henüz özel lokasyon eklenmemiş!'); return; }
+      const data={ exported_date:new Date().toISOString(), version:'1.0', locations:custom };
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement('a'); link.href=url;
+      link.download='recist_locations_'+new Date().toISOString().split('T')[0]+'.json';
+      document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+    }
+    function importLocations(){ document.getElementById('importFileInput').click(); }
+    function handleFileImport(e){
+      const file=e.target.files[0]; if(!file) return;
+      const reader=new FileReader();
+      reader.onload=function(ev){
+        try{
+          const data=JSON.parse(ev.target.result);
+          if(!data.locations || !Array.isArray(data.locations)){ alert('Geçersiz dosya formatı!'); return; }
+          const merged=[...new Set([...getCustomLocations(), ...data.locations])];
+          saveCustomLocations(merged);
+          alert('Başarıyla içe aktarıldı! '+data.locations.length+' lokasyon eklendi.');
+          openLocationManager();
+        }catch(err){ alert('Dosya okuma hatası: '+err.message); }
+      };
+      reader.readAsText(file);
+      e.target.value='';
+    }
+    function clearAllLocations(){
+      if(!confirm('TÜM özel lokasyonları silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) return;
+      localStorage.removeItem('recist_custom_locations');
+      populateDatalists();
+      alert('Tüm özel lokasyonlar temizlendi.');
+      openLocationManager();
+    }
+
+    document.getElementById('locationModal').addEventListener('click', function(e){
+      if(e.target===this){ closeLocationManager(); }
+    });
+
+    populateDatalists();
+    updateMethodInfo();
+  </script>
+</body>
+</html>
