@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ADPKD – Mayo Hacim Hesaplayıcı</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#111a2b;
+      --muted:#a3b1c6;
+      --accent:#3b82f6;
+      --ok:#16a34a;
+      --warn:#fbbf24;
+      --bad:#ef4444;
+      --border:#243145;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color:#e7eefc; background:var(--bg)}
+    h1{font-size:20px;margin:0 0 12px}
+    h2{font-size:16px;margin:0 0 10px}
+    p{color:var(--muted);margin:6px 0 14px}
+    .wrap{max-width:980px;margin:0 auto;display:grid;gap:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative}
+    .section-label{position:absolute;top:-10px;left:16px;background:var(--card);padding:0 8px;font-size:13px;font-weight:600;color:#cbd5e1}
+    .collapsible{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px}
+    .collapsible-header{background:#0e1627;padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none}
+    .collapsible-header:hover{background:#141f33}
+    .collapsible-icon{transition:transform 0.2s;font-size:12px}
+    .collapsible-icon.open{transform:rotate(90deg)}
+    .collapsible-content{padding:16px;display:none}
+    .collapsible-content.open{display:block}
+    .grid{display:grid;gap:8px}
+    .grid.cols-2{grid-template-columns:1fr 1fr}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    label{font-weight:600;color:#d7e3f8;font-size:13px}
+    input[type=number],input[type=text],input[type=checkbox],input[type=radio],textarea{font-family:inherit}
+    input[type=number],input[type=text],textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#0f172a;color:#e7eefc}
+    input[type=number]:focus,input[type=text]:focus,textarea:focus{outline:2px solid var(--accent)}
+    input:disabled,textarea:disabled{opacity:0.5;cursor:not-allowed;background:#0a0f1a}
+    input[type=checkbox],input[type=radio]{width:18px;height:18px;cursor:pointer}
+    .tbl{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .tbl th,.tbl td{border-bottom:1px solid var(--border);padding:10px 12px;text-align:center}
+    .tbl thead th{background:#0e1627;color:#cbd5e1;font-size:13px}
+    .tbl tbody td:first-child{font-weight:600;background:#0e1627}
+    .tbl tfoot td{font-weight:700;background:#0e1627}
+    .tbl .date-label{font-size:11px;color:var(--muted);font-weight:400}
+    .note{font-size:12px;color:#9fb0c9}
+    .btns{display:flex;gap:10px;flex-wrap:wrap}
+    button{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#141f33;color:#e7eefc;cursor:pointer;font-size:13px;font-weight:500}
+    button:hover{background:#1a2742}
+    button.primary{background:var(--accent);border-color:var(--accent);color:white}
+    button.primary:hover{background:#2563eb}
+    button:disabled{opacity:0.5;cursor:not-allowed}
+    .out{display:grid;gap:12px}
+    .kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .kpi .box{background:#0c1526;border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
+    .box h3{margin:6px 0 2px;font-size:13px;color:#cbd5e1;font-weight:600}
+    .box .val{font-size:22px;font-weight:800}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
+    textarea{min-height:100px;font-size:13px;resize:vertical}
+    .import-area{background:#0f172a;border-radius:10px;padding:12px;margin-bottom:12px}
+    .success-card{background:#0c2818;border:1px solid #16a34a;border-radius:10px;padding:14px;margin-top:12px}
+    .success-title{color:#16a34a;font-weight:700;font-size:14px;margin-bottom:8px}
+    .success-detail{font-size:13px;color:#cbd5e1;margin:4px 0}
+    .link-btn{background:none;border:none;color:var(--accent);text-decoration:underline;padding:0;font-size:12px;cursor:pointer}
+    .link-btn:hover{color:#60a5fa}
+    .kidney-divider{width:1px;background:linear-gradient(to bottom, transparent, var(--accent), transparent);margin:0 8px}
+    .neph-box{background:#1a2742;border-radius:10px;padding:12px;margin-bottom:16px}
+    .neph-options{margin-top:10px;padding-left:26px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>ADPKD – Mayo Hacim Hesaplayıcı</h1>
+      <p>Kistler <em>dahil</em> böbrek dış sınırlarından <strong>SAG (uzunluk)</strong>, <strong>AP</strong> ve <strong>TRA</strong> (genişlik) ölçülerini mm cinsinden girin. Hacim formülü: <span class="mono">Vol = L × W × T × 0.523 / 1000</span> (mL).</p>
+    </header>
+
+    <div class="collapsible">
+      <div class="collapsible-header" onclick="toggleCollapsible('import')">
+        <span class="collapsible-icon" id="import-icon">▶</span>
+        <span style="font-weight:600">📋 Önceki Rapor Yükle (opsiyonel)</span>
+        <span class="note" style="margin-left:auto">HBYS'den kopyala-yapıştır</span>
+      </div>
+      <div class="collapsible-content" id="import-content">
+        <div id="importFormArea">
+          <div class="import-area">
+            <label>HBYS raporunu buraya yapıştırın:</label>
+            <textarea id="importText" placeholder="Polikistik Böbrek – Hacim Hesabı (Mayo yaklaşımı)&#10;Ölçümler kistler dahil böbrek dış sınırlarından yapılmıştır.&#10;Sağ: SAG 107 mm, AP 53 mm, TRA 48 mm → Hacim 142.4 mL.&#10;..."></textarea>
+            <div style="margin-top:10px">
+              <label>Önceki rapor tarihi:</label>
+              <input type="text" id="prevDate" placeholder="gg.aa.yyyy veya gg/aa/yyyy" style="max-width:200px">
+            </div>
+            <button style="margin-top:10px" class="primary" onclick="parseImport()">Verileri Aktar</button>
+            <p class="note">Not: Tarih bilgisi yoksa lütfen manuel girin.</p>
+          </div>
+        </div>
+        <div id="importSuccessArea" style="display:none">
+          <div class="success-card">
+            <div class="success-title">✓ Önceki Veriler Yüklendi</div>
+            <div class="success-detail"><strong>Tarih:</strong> <span id="loadedDate">–</span></div>
+            <div class="success-detail"><strong>Sağ Böbrek:</strong> <span id="loadedRightVol">–</span> mL</div>
+            <div class="success-detail"><strong>Sol Böbrek:</strong> <span id="loadedLeftVol">–</span> mL</div>
+            <div class="success-detail"><strong>TKV:</strong> <span id="loadedTKV">–</span> mL</div>
+            <div class="success-detail"><strong>htTKV:</strong> <span id="loadedHtTKV">–</span> mL/m</div>
+            <div class="success-detail"><strong>Mayo:</strong> <span id="loadedMayo">–</span></div>
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid #16a34a">
+              <span style="color:#10b981">→ Şimdi yeni ölçümleri aşağıya girin ve "Hesapla" butonuna basın.</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;text-align:right">
+            <button class="link-btn" onclick="clearPreviousData()">Önceki Veriyi Sil</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="section-label">Bu İnceleme</div>
+      
+      <div class="neph-box">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="nephrectomyMode" onchange="toggleNephrectomy()">
+          <span>🏥 Nefrektomi yapıldı (tek böbrek takibi)</span>
+        </label>
+        <div id="nephrectomyOptions" class="neph-options" style="display:none">
+          <label style="font-size:13px;color:#cbd5e1">Hangi böbrek alındı?</label>
+          <div style="display:flex;gap:16px;margin-top:6px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#cbd5e1">
+              <input type="radio" name="nephrectomySide" value="right" onchange="applyNephrectomy()" checked>
+              <span>Sağ böbrek</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#cbd5e1">
+              <input type="radio" name="nephrectomySide" value="left" onchange="applyNephrectomy()">
+              <span>Sol böbrek</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:start">
+        <div>
+          <h2>Sağ Böbrek</h2>
+          <div class="grid cols-3">
+            <div><label for="rL">SAG (mm)</label><input id="rL" type="number" min="0" step="1" value=""></div>
+            <div><label for="rAP">AP (mm)</label><input id="rAP" type="number" min="0" step="1" value=""></div>
+            <div><label for="rT">TRA (mm)</label><input id="rT" type="number" min="0" step="1" value=""></div>
+          </div>
+        </div>
+        <div class="kidney-divider" style="align-self:stretch"></div>
+        <div>
+          <h2>Sol Böbrek</h2>
+          <div class="grid cols-3">
+            <div><label for="lL">SAG (mm)</label><input id="lL" type="number" min="0" step="1" value=""></div>
+            <div><label for="lAP">AP (mm)</label><input id="lAP" type="number" min="0" step="1" value=""></div>
+            <div><label for="lT">TRA (mm)</label><input id="lT" type="number" min="0" step="1" value=""></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid cols-3" style="margin-top:16px">
+        <div>
+          <label for="age">Yaş (yıl) <span class="note">(Mayo için)</span></label>
+          <input id="age" type="number" min="0" step="1" placeholder="Örn. 45">
+        </div>
+        <div>
+          <label for="height">Boy (cm) <span class="note">(htTKV için)</span></label>
+          <input id="height" type="number" min="0" step="0.1" placeholder="Örn. 172">
+        </div>
+        <div style="display:flex;align-items:end">
+          <button class="primary" id="calcBtn">Hesapla <span id="calcBadge"></span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card out">
+      <div class="section-label">Hesaplama Sonuçları</div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Böbrek</th><th>SAG (mm)</th><th>AP (mm)</th><th>TRA (mm)</th><th>Vol (mL)</th></tr>
+        </thead>
+        <tbody id="resultsBody">
+          <tr><td>Sağ</td><td id="rL_out">–</td><td id="rAP_out">–</td><td id="rT_out">–</td><td id="rV">–</td></tr>
+          <tr><td>Sol</td><td id="lL_out">–</td><td id="lAP_out">–</td><td id="lT_out">–</td><td id="lV">–</td></tr>
+        </tbody>
+        <tfoot id="resultsFooter">
+          <tr><td colspan="4">Toplam Böbrek Hacmi (TKV)</td><td id="tkv">–</td></tr>
+        </tfoot>
+      </table>
+
+      <div class="kpi">
+        <div class="box"><h3>htTKV (mL/m)</h3><div class="val" id="httkv">–</div><div class="note">(Boy girilirse hesaplanır)</div></div>
+        <div class="box"><h3>Mayo Sınıfı</h3><div class="val" id="mayo">–</div><div class="note" id="mayoNote">(Tipik sınıf 1 için)</div></div>
+      </div>
+
+      <div id="progressionBox" style="display:none;margin-top:12px">
+        <div class="kpi" style="grid-template-columns:1fr">
+          <div class="box" style="background:#0e1627">
+            <h3 id="progTitle">Progresyon Analizi</h3>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px;text-align:center">
+              <div>
+                <div class="note" style="margin-bottom:4px" id="progLabel1">TKV Değişimi</div>
+                <div class="val" style="font-size:20px" id="progTKV">–</div>
+              </div>
+              <div>
+                <div class="note" style="margin-bottom:4px">htTKV Değişimi</div>
+                <div class="val" style="font-size:20px" id="progHtTKV">–</div>
+              </div>
+              <div>
+                <div class="note" style="margin-bottom:4px">Yıllık Progresyon</div>
+                <div class="val" style="font-size:20px" id="progYearly">–</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);text-align:center">
+              <span class="note">Süre: <strong id="timeDiff">–</strong></span>
+              <span style="margin:0 8px;color:var(--muted)">•</span>
+              <span class="note" id="mayoChangeLabel">Mayo: <span id="mayoChange">–</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="copyReport">Rapor Metnini Kopyala</button>
+        <button id="downloadJSON">📥 JSON İndir</button>
+        <button id="reset">Temizle</button>
+      </div>
+
+      <textarea id="report" readonly></textarea>
+      <p class="note">Not: Mayo ADPKD sınıflaması yalnızca <strong>Tipik (Class 1)</strong> olgular içindir ve <strong>bilateral böbrek</strong> gerektirir. Tek böbrek durumunda sadece hacim takibi yapılır.</p>
+    </section>
+  </div>
+
+  <script>
+    let previousData = null;
+
+    function volMl(L, W, T){
+      if([L,W,T].some(x => !isFinite(x) || x<=0)) return NaN;
+      return (L*W*T*0.523)/1000;
+    }
+
+    function fmt(x){
+      return isFinite(x) ? (Math.round(x*10)/10).toFixed(1) : '–';
+    }
+
+    function formatDate(dateStr) {
+      if(!dateStr) return '–';
+      if(dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if(parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+      const d = new Date(dateStr);
+      if(isNaN(d.getTime())) return '–';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    function mayoClassFromHtTKV(age, httkv){
+      if(!isFinite(age) || age<=0 || !isFinite(httkv) || httkv<=0) return {cls:'–', alpha: NaN};
+      const K = 150.0;
+      const alpha = 100 * (Math.pow(httkv / K, 1/age) - 1);
+      let cls = '1A';
+      if(alpha >= 1.5) cls = '1B';
+      if(alpha >= 3.0) cls = '1C';
+      if(alpha >= 4.5) cls = '1D';
+      if(alpha > 6.0) cls = '1E';
+      return {cls, alpha};
+    }
+
+    function toggleNephrectomy() {
+      const isChecked = document.getElementById('nephrectomyMode').checked;
+      document.getElementById('nephrectomyOptions').style.display = isChecked ? 'block' : 'none';
+      
+      if(isChecked) {
+        applyNephrectomy();
+      } else {
+        ['rL','rAP','rT','lL','lAP','lT'].forEach(id => {
+          document.getElementById(id).disabled = false;
+        });
+        calc();
+      }
+    }
+
+    function applyNephrectomy() {
+      const side = document.querySelector('input[name="nephrectomySide"]:checked').value;
+      
+      if(side === 'right') {
+        ['rL','rAP','rT'].forEach(id => {
+          document.getElementById(id).value = 0;
+          document.getElementById(id).disabled = true;
+        });
+        ['lL','lAP','lT'].forEach(id => {
+          document.getElementById(id).disabled = false;
+        });
+      } else {
+        ['lL','lAP','lT'].forEach(id => {
+          document.getElementById(id).value = 0;
+          document.getElementById(id).disabled = true;
+        });
+        ['rL','rAP','rT'].forEach(id => {
+          document.getElementById(id).disabled = false;
+        });
+      }
+      calc();
+    }
+
+    function parseImport() {
+      const text = document.getElementById('importText').value;
+      let dateInput = document.getElementById('prevDate').value.trim();
+      
+      if(!text.trim()) {
+        alert('❌ Lütfen rapor metnini yapıştırın');
+        return;
+      }
+
+      if(!dateInput) {
+        alert('❌ Lütfen önceki rapor tarihini girin');
+        return;
+      }
+
+      const parts = dateInput.split(/[./]/);
+      if(parts.length === 3) {
+        let day = parts[0].padStart(2, '0');
+        let month = parts[1].padStart(2, '0');
+        let year = parts[2].trim();
+        if(year.length === 2) {
+          const yy = parseInt(year, 10);
+          year = (yy <= 49 ? '20' : '19') + year;
+        }
+        dateInput = `${year}-${month}-${day}`;
+      }
+
+      const tkvMatch = text.match(/TKV[^\d]*([\d.]+)\s*mL/i);
+      const htMatch = text.match(/htTKV[^\d]*([\d.]+)\s*mL/i);
+      const mayoMatch = text.match(/Mayo sınıfı:\s*([^\s—.]+)/i);
+      const rVolMatch = text.match(/Sağ:.*?Hacim\s*([\d.]+)\s*mL/i);
+      const lVolMatch = text.match(/Sol:.*?Hacim\s*([\d.]+)\s*mL/i);
+
+      const errors = [];
+      const warnings = [];
+
+      if(!tkvMatch) {
+        errors.push('• TKV değeri bulunamadı');
+      }
+      if(!htMatch) {
+        warnings.push('• htTKV değeri bulunamadı (progresyon analizi sınırlı olacak)');
+      }
+
+      if(errors.length > 0) {
+        let msg = '❌ Eksik bilgi tespit edildi:\n\n';
+        msg += errors.join('\n');
+        if(warnings.length > 0) {
+          msg += '\n\n⚠️ Uyarılar:\n';
+          msg += warnings.join('\n');
+        }
+        msg += '\n\nProgresyon analizi için gerekli:\n';
+        msg += '• TKV değeri (zorunlu)\n';
+        msg += '• htTKV değeri (önerilen)\n';
+        msg += '• Tarih bilgisi (zorunlu)';
+        alert(msg);
+        return;
+      }
+
+      previousData = {
+        tkv: parseFloat(tkvMatch[1]),
+        httkv: htMatch ? parseFloat(htMatch[1]) : NaN,
+        mayo: mayoMatch ? mayoMatch[1] : '–',
+        date: dateInput,
+        rightVol: rVolMatch ? parseFloat(rVolMatch[1]) : NaN,
+        leftVol: lVolMatch ? parseFloat(lVolMatch[1]) : NaN
+      };
+
+      document.getElementById('importFormArea').style.display = 'none';
+      document.getElementById('importSuccessArea').style.display = 'block';
+      
+      document.getElementById('loadedDate').textContent = formatDate(dateInput);
+      document.getElementById('loadedRightVol').textContent = fmt(previousData.rightVol);
+      document.getElementById('loadedLeftVol').textContent = fmt(previousData.leftVol);
+      document.getElementById('loadedTKV').textContent = fmt(previousData.tkv);
+      document.getElementById('loadedHtTKV').textContent = fmt(previousData.httkv);
+      document.getElementById('loadedMayo').textContent = previousData.mayo;
+
+      document.getElementById('calcBadge').textContent = '📊';
+    }
+
+    function clearPreviousData() {
+      if(confirm('Önceki verileri silmek istediğinize emin misiniz?')) {
+        previousData = null;
+        document.getElementById('importFormArea').style.display = 'block';
+        document.getElementById('importSuccessArea').style.display = 'none';
+        document.getElementById('importText').value = '';
+        document.getElementById('prevDate').value = '';
+        document.getElementById('calcBadge').textContent = '';
+        document.getElementById('progressionBox').style.display = 'none';
+      }
+    }
+
+    function buildReport(values){
+      const {rL,rAP,rT,lL,lAP,lT, rV, lV, TKV, age, height, httkv, mayo} = values;
+      const isNephrectomy = document.getElementById('nephrectomyMode').checked;
+      const lines = [];
+      
+      if(previousData) {
+        if(isNephrectomy) {
+          lines.push('Polikistik Böbrek – Nefrektomi Sonrası Takip (Mayo yaklaşımı)');
+        } else {
+          lines.push('Polikistik Böbrek – Hacim Hesabı (Mayo yaklaşımı) - Takip İncelemesi');
+        }
+        lines.push('');
+        lines.push(`Önceki inceleme (${formatDate(previousData.date)}): TKV ${fmt(previousData.tkv)} mL, htTKV ${fmt(previousData.httkv)} mL/m, Mayo ${previousData.mayo}`);
+        if(isNephrectomy && (previousData.rightVol || previousData.leftVol)) {
+          const side = document.querySelector('input[name="nephrectomySide"]:checked').value;
+          const sideText = side === 'right' ? 'Sol' : 'Sağ';
+          const prevVol = side === 'right' ? previousData.leftVol : previousData.rightVol;
+          lines.push(`${sideText} böbrek önceki hacim: ${fmt(prevVol)} mL`);
+        }
+        lines.push('');
+      } else {
+        if(isNephrectomy) {
+          lines.push('Polikistik Böbrek – Nefrektomi Sonrası İnceleme (Mayo yaklaşımı)');
+        } else {
+          lines.push('Polikistik Böbrek – Hacim Hesabı (Mayo yaklaşımı)');
+        }
+      }
+      
+      lines.push('Ölçümler kistler dahil böbrek dış sınırlarından yapılmıştır.');
+      lines.push(`Sağ: SAG ${rL} mm, AP ${rAP} mm, TRA ${rT} mm → Hacim ${fmt(rV)} mL.`);
+      lines.push(`Sol: SAG ${lL} mm, AP ${lAP} mm, TRA ${lT} mm → Hacim ${fmt(lV)} mL.`);
+      lines.push(`Toplam Böbrek Hacmi (TKV): ${fmt(TKV)} mL.`);
+      
+      if(isFinite(height)){
+        lines.push(`Boy: ${height} cm → htTKV: ${fmt(httkv)} mL/m.`);
+      }
+      if(isFinite(age) && isFinite(httkv) && !isNephrectomy){
+        lines.push(`Mayo sınıfı: ${mayo}.`);
+      } else if(isNephrectomy) {
+        lines.push('Not: Mayo sınıflaması tek böbrek için uygulanmaz.');
+      }
+      
+      if(previousData && isNephrectomy && (previousData.rightVol || previousData.leftVol)) {
+        const side = document.querySelector('input[name="nephrectomySide"]:checked').value;
+        const sideText = side === 'right' ? 'Sol' : 'Sağ';
+        const prevKidney = side === 'right' ? previousData.leftVol : previousData.rightVol;
+        
+        if(isFinite(prevKidney)) {
+          const change = ((TKV - prevKidney) / prevKidney) * 100;
+          const prevDate = new Date(previousData.date);
+          const today = new Date();
+          const diffMonths = (today.getFullYear() - prevDate.getFullYear()) * 12 + (today.getMonth() - prevDate.getMonth());
+          const diffYears = diffMonths / 12;
+          const yearlyProg = diffYears > 0 ? (change / diffYears).toFixed(1) : '–';
+          
+          lines.push('');
+          lines.push(`${sideText} böbrek progresyonu: ${fmt(prevKidney)} mL → ${fmt(TKV)} mL (${diffMonths} ay içinde ${change > 0 ? '+' : ''}${change.toFixed(1)}% değişim, yıllık ~${yearlyProg}%/yıl).`);
+          if(change > 0 && change < 20) {
+            lines.push('Not: Kompansatuar hipertrofi beklenir.');
+          }
+        }
+      } else if(previousData && !isNephrectomy) {
+        const tkvChange = ((TKV - previousData.tkv) / previousData.tkv) * 100;
+        const prevDate = new Date(previousData.date);
+        const today = new Date();
+        const diffMonths = (today.getFullYear() - prevDate.getFullYear()) * 12 + (today.getMonth() - prevDate.getMonth());
+        const diffYears = diffMonths / 12;
+        const yearlyProg = diffYears > 0 ? (tkvChange / diffYears).toFixed(1) : '–';
+        
+        lines.push('');
+        lines.push(`Progresyon: TKV ${diffMonths} ay içinde ${tkvChange > 0 ? '+' : ''}${tkvChange.toFixed(1)}% değişim (yıllık ~${yearlyProg}%/yıl).`);
+      }
+      
+      return lines.join('\n');
+    }
+
+    function calc(){
+      const rL = Number(document.getElementById('rL').value);
+      const rAP = Number(document.getElementById('rAP').value);
+      const rT = Number(document.getElementById('rT').value);
+      const lL = Number(document.getElementById('lL').value);
+      const lAP = Number(document.getElementById('lAP').value);
+      const lT = Number(document.getElementById('lT').value);
+      const age = Number(document.getElementById('age').value);
+      const heightCm = Number(document.getElementById('height').value);
+      const isNephrectomy = document.getElementById('nephrectomyMode').checked;
+
+      const rV = volMl(rL,rAP,rT);
+      const lV = volMl(lL,lAP,lT);
+      const TKV = (rV||0)+(lV||0);
+      
+      document.getElementById('rL_out').textContent = isFinite(rL)? rL : '–';
+      document.getElementById('rAP_out').textContent = isFinite(rAP)? rAP : '–';
+      document.getElementById('rT_out').textContent = isFinite(rT)? rT : '–';
+      document.getElementById('lL_out').textContent = isFinite(lL)? lL : '–';
+      document.getElementById('lAP_out').textContent = isFinite(lAP)? lAP : '–';
+      document.getElementById('lT_out').textContent = isFinite(lT)? lT : '–';
+
+      document.getElementById('rV').textContent = fmt(rV);
+      document.getElementById('lV').textContent = fmt(lV);
+      document.getElementById('tkv').textContent = fmt(TKV);
+
+      let httkv = NaN;
+      if(isFinite(heightCm) && heightCm>0){
+        httkv = TKV / (heightCm/100.0);
+      }
+      document.getElementById('httkv').textContent = fmt(httkv);
+
+      let mayoLabel = '–';
+      if(isFinite(age) && isFinite(httkv) && !isNephrectomy){
+        const r = mayoClassFromHtTKV(age, httkv);
+        mayoLabel = `${r.cls} — eHTKV-α: ${fmt(r.alpha)} %/yıl`;
+      } else if(isNephrectomy) {
+        mayoLabel = 'Tek böbrek (N/A)';
+      }
+      document.getElementById('mayo').textContent = mayoLabel;
+      document.getElementById('mayoNote').textContent = isNephrectomy ? '(Tek böbrek için geçersiz)' : '(Tipik sınıf 1 için)';
+
+      if(previousData && isFinite(TKV)) {
+        showProgression(TKV, httkv, mayoLabel);
+      } else {
+        document.getElementById('progressionBox').style.display = 'none';
+      }
+
+      const report = buildReport({rL,rAP,rT,lL,lAP,lT,rV,lV,TKV,age,height:heightCm,httkv,mayo:mayoLabel});
+      document.getElementById('report').value = report;
+    }
+
+    function showProgression(currTKV, currHtTKV, currMayo) {
+      const isNephrectomy = document.getElementById('nephrectomyMode').checked;
+      document.getElementById('progressionBox').style.display = 'block';
+      
+      if(isNephrectomy && (previousData.rightVol || previousData.leftVol)) {
+        const side = document.querySelector('input[name="nephrectomySide"]:checked').value;
+        const sideText = side === 'right' ? 'Sol' : 'Sağ';
+        const prevKidney = side === 'right' ? previousData.leftVol : previousData.rightVol;
+        
+        document.getElementById('progTitle').textContent = `${sideText} Böbrek Takibi`;
+        document.getElementById('progLabel1').textContent = `${sideText} Böbrek Değişimi`;
+        
+        if(isFinite(prevKidney)) {
+          const kidneyChange = ((currTKV - prevKidney) / prevKidney) * 100;
+          
+          const prevDate = new Date(previousData.date);
+          const today = new Date();
+          const diffMonths = (today.getFullYear() - prevDate.getFullYear()) * 12 + (today.getMonth() - prevDate.getMonth());
+          const diffYears = diffMonths / 12;
+          const yearlyProg = diffYears > 0 ? (kidneyChange / diffYears).toFixed(1) : '–';
+
+          const tkvEl = document.getElementById('progTKV');
+          tkvEl.textContent = (kidneyChange >= 0 ? '+' : '') + kidneyChange.toFixed(1) + '%';
+          tkvEl.style.color = kidneyChange > 15 ? 'var(--bad)' : kidneyChange > 0 ? 'var(--warn)' : 'var(--ok)';
+
+          document.getElementById('progHtTKV').textContent = '–';
+          document.getElementById('progHtTKV').style.color = 'var(--muted)';
+
+          const yearlyEl = document.getElementById('progYearly');
+          yearlyEl.textContent = '~' + yearlyProg + '%/yıl';
+          yearlyEl.style.color = parseFloat(yearlyProg) > 10 ? 'var(--bad)' : 'var(--warn)';
+
+          document.getElementById('timeDiff').textContent = diffMonths + ' ay';
+          document.getElementById('mayoChangeLabel').innerHTML = 
+            `<span style="color:var(--muted)">Tek böbrek takibi (${sideText})</span>`;
+        }
+      } else {
+        document.getElementById('progTitle').textContent = 'Progresyon Analizi';
+        document.getElementById('progLabel1').textContent = 'TKV Değişimi';
+        
+        const tkvChange = ((currTKV - previousData.tkv) / previousData.tkv) * 100;
+        const httvChange = isFinite(currHtTKV) && isFinite(previousData.httkv) 
+          ? ((currHtTKV - previousData.httkv) / previousData.httkv) * 100 
+          : NaN;
+
+        const prevDate = new Date(previousData.date);
+        const today = new Date();
+        const diffMonths = (today.getFullYear() - prevDate.getFullYear()) * 12 + (today.getMonth() - prevDate.getMonth());
+        const diffYears = diffMonths / 12;
+        const yearlyProg = diffYears > 0 ? (tkvChange / diffYears).toFixed(1) : '–';
+
+        const tkvEl = document.getElementById('progTKV');
+        tkvEl.textContent = (tkvChange >= 0 ? '+' : '') + tkvChange.toFixed(1) + '%';
+        tkvEl.style.color = tkvChange > 5 ? 'var(--bad)' : tkvChange > 0 ? 'var(--warn)' : 'var(--ok)';
+
+        const htEl = document.getElementById('progHtTKV');
+        if(isFinite(httvChange)) {
+          htEl.textContent = (httvChange >= 0 ? '+' : '') + httvChange.toFixed(1) + '%';
+          htEl.style.color = httvChange > 5 ? 'var(--bad)' : httvChange > 0 ? 'var(--warn)' : 'var(--ok)';
+        } else {
+          htEl.textContent = '–';
+          htEl.style.color = 'var(--muted)';
+        }
+
+        const yearlyEl = document.getElementById('progYearly');
+        yearlyEl.textContent = '~' + yearlyProg + '%/yıl';
+        yearlyEl.style.color = parseFloat(yearlyProg) > 5 ? 'var(--bad)' : 'var(--warn)';
+
+        document.getElementById('timeDiff').textContent = diffMonths + ' ay';
+
+        const prevClass = previousData.mayo.charAt(1) || previousData.mayo.charAt(0);
+        const currClass = currMayo.charAt(0) === '1' ? currMayo.charAt(1) : '–';
+        const mayoChangeEl = document.getElementById('mayoChange');
+        
+        if(currClass !== '–' && prevClass !== '–') {
+          if(currClass > prevClass) {
+            mayoChangeEl.innerHTML = `<span style="color:var(--warn)">${previousData.mayo} → ${currMayo.split(' —')[0]} (⚠️ Artış)</span>`;
+          } else if(currClass < prevClass) {
+            mayoChangeEl.innerHTML = `<span style="color:var(--ok)">${previousData.mayo} → ${currMayo.split(' —')[0]} (✓ İyileşme)</span>`;
+          } else {
+            mayoChangeEl.innerHTML = `${previousData.mayo} → ${currMayo.split(' —')[0]} (Stabil)`;
+          }
+        } else {
+          mayoChangeEl.textContent = '–';
+        }
+        
+        document.getElementById('mayoChangeLabel').innerHTML = 'Mayo: <span id="mayoChange">' + mayoChangeEl.innerHTML + '</span>';
+      }
+    }
+
+    function toggleCollapsible(id) {
+      const content = document.getElementById(id + '-content');
+      const icon = document.getElementById(id + '-icon');
+      const isOpen = content.classList.contains('open');
+      
+      if(isOpen) {
+        content.classList.remove('open');
+        icon.classList.remove('open');
+        icon.textContent = '▶';
+      } else {
+        content.classList.add('open');
+        icon.classList.add('open');
+        icon.textContent = '▼';
+      }
+    }
+
+    document.getElementById('calcBtn').addEventListener('click', calc);
+    
+    ['rL','rAP','rT','lL','lAP','lT','age','height'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', calc);
+    });
+
+    document.getElementById('copyReport').addEventListener('click', async ()=>{
+      const txt = document.getElementById('report').value;
+      if(!txt.trim()) {
+        alert('Önce hesaplama yapın');
+        return;
+      }
+      try{ 
+        await navigator.clipboard.writeText(txt); 
+        alert('✓ Rapor panoya kopyalandı'); 
+      } catch(e){
+        const ta = document.getElementById('report');
+        ta.select(); 
+        document.execCommand('copy');
+        alert('✓ Rapor panoya kopyalandı');
+      }
+    });
+
+    document.getElementById('downloadJSON').addEventListener('click', ()=>{
+      const rL = document.getElementById('rL').value;
+      const rAP = document.getElementById('rAP').value;
+      const rT = document.getElementById('rT').value;
+      const lL = document.getElementById('lL').value;
+      const lAP = document.getElementById('lAP').value;
+      const lT = document.getElementById('lT').value;
+      const age = document.getElementById('age').value;
+      const height = document.getElementById('height').value;
+
+      if(!rL || !rAP || !rT || !lL || !lAP || !lT) {
+        alert('Önce tüm ölçümleri girin');
+        return;
+      }
+
+      const data = {
+        date: new Date().toISOString().split('T')[0],
+        nephrectomy: document.getElementById('nephrectomyMode').checked,
+        measurements: {
+          right: { L: rL, AP: rAP, TRA: rT },
+          left: { L: lL, AP: lAP, TRA: lT },
+          age: age || null,
+          height: height || null,
+          tkv: document.getElementById('tkv').textContent,
+          httkv: document.getElementById('httkv').textContent,
+          mayo: document.getElementById('mayo').textContent
+        },
+        previousData: previousData,
+        report: document.getElementById('report').value
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `adpkd_${data.date}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      alert('✓ JSON dosyası indirildi');
+    });
+
+    document.getElementById('reset').addEventListener('click', ()=>{
+      if(confirm('Tüm verileri temizlemek istediğinize emin misiniz?\n\n(Önceki yüklenen veriler korunacak)')) {
+        ['rL','rAP','rT','lL','lAP','lT','age','height'].forEach(id=>{
+          document.getElementById(id).value='';
+          document.getElementById(id).disabled = false;
+        });
+        document.getElementById('nephrectomyMode').checked = false;
+        document.getElementById('nephrectomyOptions').style.display = 'none';
+        calc();
+      }
+    });
+  </script>
+</body>
+</html>
